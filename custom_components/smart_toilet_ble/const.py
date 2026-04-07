@@ -1,6 +1,7 @@
 """Constants for Smart Toilet BLE integration."""
 from dataclasses import dataclass
 from typing import Optional
+from homeassistant.components.sensor import SensorStateClass
 
 DOMAIN = "smart_toilet_ble"
 MANUFACTURER = "Smart Toilet"
@@ -32,6 +33,16 @@ class ToiletCommand:
     category: str = "basic"  # basic, wash, cover, cleaning, temp
 
 
+@dataclass
+class SwitchDefinition:
+    """Defines a switch with on/off commands."""
+    id: str
+    name: str
+    on_command: str
+    off_command: str
+    has_state: bool = True
+
+
 # All toilet commands registry
 TOILET_COMMANDS = {
     # Basic controls
@@ -48,7 +59,7 @@ TOILET_COMMANDS = {
     "auto_off": ToiletCommand("auto_off", "Auto Mode Off", 0x06, 0x00, "basic"),
     "self_clean": ToiletCommand("self_clean", "Self Clean", 0x07, 0x01, "cleaning"),
     
-    # Washing functions
+    # Washing functions (momentary - no off state)
     "women_wash": ToiletCommand("women_wash", "Women's Wash", 0x10, 0x01, "wash"),
     "butt_wash": ToiletCommand("butt_wash", "Butt Wash", 0x11, 0x01, "wash"),
     "child_wash": ToiletCommand("child_wash", "Child Wash", 0x12, 0x01, "wash"),
@@ -65,6 +76,48 @@ TOILET_COMMANDS = {
     "dry_on": ToiletCommand("dry_on", "Blow Dry On", 0x31, 0x01, "cleaning"),
     "dry_off": ToiletCommand("dry_off", "Blow Dry Off", 0x31, 0x00, "cleaning"),
 }
+
+# Switch definitions - references to TOILET_COMMANDS
+SWITCH_DEFINITIONS = [
+    SwitchDefinition("light", "Light", "light_on", "light_off"),
+    SwitchDefinition("power", "Power", "power_on", "power_off"),
+    SwitchDefinition("eco", "ECO Mode", "eco_on", "eco_off"),
+    SwitchDefinition("foam", "Foam Shield", "foam_on", "foam_off"),
+    SwitchDefinition("auto", "Auto Mode", "auto_on", "auto_off"),
+    SwitchDefinition("women_wash", "Women's Wash", "women_wash", None, has_state=False),
+    SwitchDefinition("butt_wash", "Butt Wash", "butt_wash", None, has_state=False),
+    SwitchDefinition("child_wash", "Child Wash", "child_wash", None, has_state=False),
+    SwitchDefinition("massage", "Massage", "massage", None, has_state=False),
+    SwitchDefinition("dry", "Blow Dry", "dry_on", "dry_off"),
+    SwitchDefinition("cover", "Toilet Cover", "cover_open", "cover_close"),
+    SwitchDefinition("ring", "Toilet Ring", "ring_open", "ring_close"),
+]
+
+# Button definitions - references to TOILET_COMMANDS
+BUTTON_DEFINITIONS = [
+    ("flush", "Flush", "flush"),
+    ("stop", "Stop All", "stop"),
+    ("self_clean", "Self Clean", "self_clean"),
+]
+
+# Sensor definitions
+SENSOR_DEFINITIONS = [
+    ("connection", "Connection Status", "connection", None, None, None),
+    ("seat_temp", "Seat Temperature Level", "seat_temp", None, "level", SensorStateClass.MEASUREMENT),
+    ("water_temp", "Water Temperature Level", "water_temp", None, "level", SensorStateClass.MEASUREMENT),
+    ("wind_temp", "Wind Temperature Level", "wind_temp", None, "level", SensorStateClass.MEASUREMENT),
+    ("pressure", "Water Pressure Level", "pressure", None, "level", SensorStateClass.MEASUREMENT),
+    ("position", "Nozzle Position Level", "position", None, "level", SensorStateClass.MEASUREMENT),
+]
+
+# Number (slider) definitions
+NUMBER_DEFINITIONS = [
+    ("seat_temp", "Seat Temperature", 0x40),
+    ("water_temp", "Water Temperature", 0x41),
+    ("wind_temp", "Wind Temperature", 0x42),
+    ("pressure", "Water Pressure", 0x43),
+    ("position", "Nozzle Position", 0x44),
+]
 
 # Temperature and pressure control functions
 TEMP_FUNCTIONS = {

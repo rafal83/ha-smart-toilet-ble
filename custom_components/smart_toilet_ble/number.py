@@ -7,17 +7,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import SmartToiletCoordinator
-from .const import DOMAIN, ICONS
+from .const import DOMAIN, ICONS, NUMBER_DEFINITIONS
 from .entity import SmartToiletEntity
-
-# Number entity definitions: (unique_id_suffix, name, function_code, min, max, step)
-NUMBERS = [
-    ("seat_temp", "Seat Temperature", 0x40, 0, 5, 1),
-    ("water_temp", "Water Temperature", 0x41, 0, 5, 1),
-    ("wind_temp", "Wind Temperature", 0x42, 0, 5, 1),
-    ("pressure", "Water Pressure", 0x43, 0, 5, 1),
-    ("position", "Nozzle Position", 0x44, 0, 5, 1),
-]
 
 
 async def async_setup_entry(
@@ -28,20 +19,10 @@ async def async_setup_entry(
     """Set up Smart Toilet BLE number entities."""
     coordinator: SmartToiletCoordinator = hass.data[DOMAIN][entry.entry_id]
     
-    numbers = []
-    for number_id, name, function, min_val, max_val, step in NUMBERS:
-        numbers.append(
-            SmartToiletNumber(
-                coordinator=coordinator,
-                entry_id=entry.entry_id,
-                number_id=number_id,
-                name=name,
-                function=function,
-                min_value=min_val,
-                max_value=max_val,
-                step=step,
-            )
-        )
+    numbers = [
+        SmartToiletNumber(coordinator, entry.entry_id, *num_def)
+        for num_def in NUMBER_DEFINITIONS
+    ]
     
     async_add_entities(numbers)
 
@@ -56,21 +37,19 @@ class SmartToiletNumber(SmartToiletEntity, NumberEntity):
         number_id: str,
         name: str,
         function: int,
-        min_value: int,
-        max_value: int,
-        step: int,
     ) -> None:
-        """Initialize the number entity."""
+        """Initialize the number entity from definition."""
         super().__init__(coordinator, entry_id)
         
         self._number_id = number_id
         self._function = function
+        
         self._attr_name = name
         self._attr_unique_id = f"{entry_id}_number_{number_id}"
         self._attr_icon = ICONS.get(number_id, "mdi:gauge")
-        self._attr_native_min_value = min_value
-        self._attr_native_max_value = max_value
-        self._attr_native_step = step
+        self._attr_native_min_value = 0
+        self._attr_native_max_value = 5
+        self._attr_native_step = 1
         self._attr_mode = NumberMode.SLIDER
         self._attr_native_unit_of_measurement = "level"
 
@@ -86,5 +65,4 @@ class SmartToiletNumber(SmartToiletEntity, NumberEntity):
         level = int(value)
         success = await self.coordinator.send_toilet_command(self._function, level)
         if success:
-            # Value is tracked in coordinator._last_values
             self.async_write_ha_state()

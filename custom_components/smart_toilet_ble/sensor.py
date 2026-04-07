@@ -1,24 +1,14 @@
 """Support for Smart Toilet BLE sensors."""
 from __future__ import annotations
 
-from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, SensorStateClass
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import SmartToiletCoordinator
-from .const import DOMAIN, ICONS
+from .const import DOMAIN, ICONS, SENSOR_DEFINITIONS
 from .entity import SmartToiletEntity
-
-# Sensor definitions: (unique_id_suffix, name, key, device_class, unit, state_class)
-SENSORS = [
-    ("connection", "Connection Status", "connection", None, None, None),
-    ("seat_temp", "Seat Temperature Level", "seat_temp", None, "level", SensorStateClass.MEASUREMENT),
-    ("water_temp", "Water Temperature Level", "water_temp", None, "level", SensorStateClass.MEASUREMENT),
-    ("wind_temp", "Wind Temperature Level", "wind_temp", None, "level", SensorStateClass.MEASUREMENT),
-    ("pressure", "Water Pressure Level", "pressure", None, "level", SensorStateClass.MEASUREMENT),
-    ("position", "Nozzle Position Level", "position", None, "level", SensorStateClass.MEASUREMENT),
-]
 
 
 async def async_setup_entry(
@@ -29,20 +19,10 @@ async def async_setup_entry(
     """Set up Smart Toilet BLE sensors."""
     coordinator: SmartToiletCoordinator = hass.data[DOMAIN][entry.entry_id]
     
-    sensors = []
-    for sensor_id, name, key, device_class, unit, state_class in SENSORS:
-        sensors.append(
-            SmartToiletSensor(
-                coordinator=coordinator,
-                entry_id=entry.entry_id,
-                sensor_id=sensor_id,
-                name=name,
-                key=key,
-                device_class=device_class,
-                unit=unit,
-                state_class=state_class,
-            )
-        )
+    sensors = [
+        SmartToiletSensor(coordinator, entry.entry_id, *sensor_def)
+        for sensor_def in SENSOR_DEFINITIONS
+    ]
     
     async_add_entities(sensors)
 
@@ -61,11 +41,12 @@ class SmartToiletSensor(SmartToiletEntity, SensorEntity):
         unit: str | None,
         state_class: str | None,
     ) -> None:
-        """Initialize the sensor."""
+        """Initialize the sensor from definition."""
         super().__init__(coordinator, entry_id)
         
         self._sensor_id = sensor_id
         self._key = key
+        
         self._attr_name = name
         self._attr_unique_id = f"{entry_id}_sensor_{sensor_id}"
         self._attr_icon = ICONS.get(sensor_id, "mdi:gauge")

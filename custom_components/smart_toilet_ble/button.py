@@ -7,15 +7,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import SmartToiletCoordinator
-from .const import DOMAIN, ICONS
+from .const import DOMAIN, ICONS, BUTTON_DEFINITIONS, TOILET_COMMANDS
 from .entity import SmartToiletEntity
-
-# Button definitions: (unique_id_suffix, name, function_code)
-BUTTONS = [
-    ("flush", "Flush", 0x30),
-    ("stop", "Stop All", 0x05),
-    ("self_clean", "Self Clean", 0x07),
-]
 
 
 async def async_setup_entry(
@@ -26,17 +19,10 @@ async def async_setup_entry(
     """Set up Smart Toilet BLE buttons."""
     coordinator: SmartToiletCoordinator = hass.data[DOMAIN][entry.entry_id]
     
-    buttons = []
-    for button_id, name, function in BUTTONS:
-        buttons.append(
-            SmartToiletButton(
-                coordinator=coordinator,
-                entry_id=entry.entry_id,
-                button_id=button_id,
-                name=name,
-                function=function,
-            )
-        )
+    buttons = [
+        SmartToiletButton(coordinator, entry.entry_id, btn_id, name, cmd_key)
+        for btn_id, name, cmd_key in BUTTON_DEFINITIONS
+    ]
     
     async_add_entities(buttons)
 
@@ -50,17 +36,20 @@ class SmartToiletButton(SmartToiletEntity, ButtonEntity):
         entry_id: str,
         button_id: str,
         name: str,
-        function: int,
+        command_key: str,
     ) -> None:
-        """Initialize the button."""
+        """Initialize the button from definition."""
         super().__init__(coordinator, entry_id)
         
         self._button_id = button_id
-        self._function = function
+        self._command = TOILET_COMMANDS[command_key]
+        
         self._attr_name = name
         self._attr_unique_id = f"{entry_id}_button_{button_id}"
         self._attr_icon = ICONS.get(button_id, "mdi:gesture-tap")
 
     async def async_press(self) -> None:
         """Press the button."""
-        await self.coordinator.send_toilet_command(self._function, 0x01)
+        await self.coordinator.send_toilet_command(
+            self._command.function, self._command.param
+        )
