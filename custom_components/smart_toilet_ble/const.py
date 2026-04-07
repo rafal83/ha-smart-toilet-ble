@@ -98,94 +98,31 @@ GENERIC_JAPANESE_COMMANDS = {
     "dry_off": ToiletCommand("dry_off", "Blow Dry Off", 0x31, 0x00, "cleaning"),
 }
 
-# TOTO Washlet (example with different command codes)
-TOTO_WASHLET_COMMANDS = {
-    # TOTO uses different function codes
-    "light_on": ToiletCommand("light_on", "Light On", 0x11, 0x01, "basic"),
-    "light_off": ToiletCommand("light_off", "Light Off", 0x11, 0x00, "basic"),
-    "power_on": ToiletCommand("power_on", "Power On", 0x12, 0x01, "basic"),
-    "power_off": ToiletCommand("power_off", "Power Off", 0x12, 0x00, "basic"),
-    "eco_on": ToiletCommand("eco_on", "ECO Mode On", 0x13, 0x01, "basic"),
-    "eco_off": ToiletCommand("eco_off", "ECO Mode Off", 0x13, 0x00, "basic"),
-    "foam_on": ToiletCommand("foam_on", "Foam Shield On", 0x14, 0x01, "basic"),
-    "foam_off": ToiletCommand("foam_off", "Foam Shield Off", 0x14, 0x00, "basic"),
-    "stop": ToiletCommand("stop", "Stop All", 0x15, 0x00, "basic"),
-    "auto_on": ToiletCommand("auto_on", "Auto Mode On", 0x16, 0x01, "basic"),
-    "auto_off": ToiletCommand("auto_off", "Auto Mode Off", 0x16, 0x00, "basic"),
-    "self_clean": ToiletCommand("self_clean", "Self Clean", 0x17, 0x01, "cleaning"),
-    
-    "women_wash": ToiletCommand("women_wash", "Women's Wash", 0x20, 0x01, "wash"),
-    "butt_wash": ToiletCommand("butt_wash", "Butt Wash", 0x21, 0x01, "wash"),
-    "child_wash": ToiletCommand("child_wash", "Child Wash", 0x22, 0x01, "wash"),
-    "massage": ToiletCommand("massage", "Massage", 0x23, 0x01, "wash"),
-    
-    "cover_open": ToiletCommand("cover_open", "Cover Open", 0x30, 0x01, "cover"),
-    "cover_close": ToiletCommand("cover_close", "Cover Close", 0x30, 0x00, "cover"),
-    "ring_open": ToiletCommand("ring_open", "Ring Open", 0x31, 0x01, "cover"),
-    "ring_close": ToiletCommand("ring_close", "Ring Close", 0x31, 0x00, "cover"),
-    
-    "flush": ToiletCommand("flush", "Flush", 0x40, 0x01, "cleaning"),
-    "dry_on": ToiletCommand("dry_on", "Blow Dry On", 0x41, 0x01, "cleaning"),
-    "dry_off": ToiletCommand("dry_off", "Blow Dry Off", 0x41, 0x00, "cleaning"),
-}
-
-# LIXIL SATIS (another example)
-LIXIL_SATIS_COMMANDS = {
-    # LIXIL uses yet another set of codes
-    "light_on": ToiletCommand("light_on", "Light On", 0x51, 0x01, "basic"),
-    "light_off": ToiletCommand("light_off", "Light Off", 0x51, 0x00, "basic"),
-    "power_on": ToiletCommand("power_on", "Power On", 0x52, 0x01, "basic"),
-    "power_off": ToiletCommand("power_off", "Power Off", 0x52, 0x00, "basic"),
-    "eco_on": ToiletCommand("eco_on", "ECO Mode On", 0x53, 0x01, "basic"),
-    "eco_off": ToiletCommand("eco_off", "ECO Mode Off", 0x53, 0x00, "basic"),
-    "foam_on": ToiletCommand("foam_on", "Foam Shield On", 0x54, 0x01, "basic"),
-    "foam_off": ToiletCommand("foam_off", "Foam Shield Off", 0x54, 0x00, "basic"),
-    "stop": ToiletCommand("stop", "Stop All", 0x55, 0x00, "basic"),
-    "auto_on": ToiletCommand("auto_on", "Auto Mode On", 0x56, 0x01, "basic"),
-    "auto_off": ToiletCommand("auto_off", "Auto Mode Off", 0x56, 0x00, "basic"),
-    "self_clean": ToiletCommand("self_clean", "Self Clean", 0x57, 0x01, "cleaning"),
-    
-    "women_wash": ToiletCommand("women_wash", "Women's Wash", 0x60, 0x01, "wash"),
-    "butt_wash": ToiletCommand("butt_wash", "Butt Wash", 0x61, 0x01, "wash"),
-    "child_wash": ToiletCommand("child_wash", "Child Wash", 0x62, 0x01, "wash"),
-    "massage": ToiletCommand("massage", "Massage", 0x63, 0x01, "wash"),
-    
-    "cover_open": ToiletCommand("cover_open", "Cover Open", 0x70, 0x01, "cover"),
-    "cover_close": ToiletCommand("cover_close", "Cover Close", 0x70, 0x00, "cover"),
-    "ring_open": ToiletCommand("ring_open", "Ring Open", 0x71, 0x01, "cover"),
-    "ring_close": ToiletCommand("ring_close", "Ring Close", 0x71, 0x00, "cover"),
-    
-    "flush": ToiletCommand("flush", "Flush", 0x80, 0x01, "cleaning"),
-    "dry_on": ToiletCommand("dry_on", "Blow Dry On", 0x81, 0x01, "cleaning"),
-    "dry_off": ToiletCommand("dry_off", "Blow Dry Off", 0x81, 0x00, "cleaning"),
-}
+# TOTO Washlet & LIXIL SATIS (Placeholder - Commandes réelles à trouver)
+# These are examples showing where real codes would go.
+# TODO: Replace with real reverse-engineered codes if available
+TOTO_WASHLET_COMMANDS = GENERIC_JAPANESE_COMMANDS  # Placeholder
+LIXIL_SATIS_COMMANDS = GENERIC_JAPANESE_COMMANDS   # Placeholder
 
 # All supported models
 TOILET_MODELS: dict[str, ToiletModel] = {
     "generic_japanese": ToiletModel(
         id="generic_japanese",
         name="Generic Japanese Toilet",
-        description="Standard Japanese smart toilet with BLE control",
+        description="Standard Japanese smart toilet with BLE control (Verified from APK reverse-engineering)",
         commands=GENERIC_JAPANESE_COMMANDS,
         features=["light", "power", "eco", "foam", "auto", "wash", "cover", "flush", "dry"],
         manufacturer="Generic",
     ),
-    "toto_washlet": ToiletModel(
-        id="toto_washlet",
-        name="TOTO Washlet",
-        description="TOTO Washlet with advanced bidet functions",
-        commands=TOTO_WASHLET_COMMANDS,
-        features=["light", "power", "eco", "foam", "auto", "wash", "cover", "flush", "dry", "ewater+"],
-        manufacturer="TOTO",
-    ),
-    "lixil_satis": ToiletModel(
-        id="lixil_satis",
-        name="LIXIL SATIS",
-        description="LIXIL SATIS smart toilet with auto features",
-        commands=LIXIL_SATIS_COMMANDS,
-        features=["light", "power", "eco", "auto", "wash", "cover", "flush", "dry"],
-        manufacturer="LIXIL",
-    ),
+    # Uncomment and update when real codes are discovered:
+    # "toto_washlet": ToiletModel(
+    #     id="toto_washlet",
+    #     name="TOTO Washlet",
+    #     description="TOTO Washlet with advanced bidet functions",
+    #     commands=TOTO_WASHLET_COMMANDS,
+    #     features=["light", "power", "eco", "foam", "auto", "wash", "cover", "flush", "dry", "ewater+"],
+    #     manufacturer="TOTO",
+    # ),
 }
 
 # Default model
