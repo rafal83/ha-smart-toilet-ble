@@ -9,13 +9,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import SmartToiletCoordinator
-from .const import DOMAIN, ICONS
+from .const import DOMAIN, ICONS, TOILET_COMMANDS
 from .entity import SmartToiletEntity
 
-# Switch definitions: (unique_id_suffix, name, function_code, on_param, off_param, has_state)
+# Switch definitions derived from TOILET_COMMANDS registry
+# Format: (unique_id_suffix, name, function_code, on_param, off_param, has_state)
 SWITCHES = [
-    ("light", "Light", 0x01, 0x01, 0x00, True),
-    ("power", "Power", 0x02, 0x01, 0x00, True),
+    ("light", TOILET_COMMANDS["light_on"].label.split()[0], 0x01, 0x01, 0x00, True),
+    ("power", TOILET_COMMANDS["power_on"].label.split()[0], 0x02, 0x01, 0x00, True),
     ("eco", "ECO Mode", 0x03, 0x01, 0x00, True),
     ("foam", "Foam Shield", 0x04, 0x01, 0x00, True),
     ("auto", "Auto Mode", 0x06, 0x01, 0x00, True),
@@ -106,7 +107,6 @@ class SmartToiletSwitch(SmartToiletEntity, SwitchEntity):
     @property
     def is_on(self) -> bool | None:
         """Return true if the switch is on."""
-        # Since we can't read state from toilet, assume off for momentary switches
         if not self._has_state:
             return None
         return getattr(self, "_attr_is_on", False)
