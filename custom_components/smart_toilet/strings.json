@@ -3,7 +3,14 @@
     "step": {
       "user": {
         "title": "Smart Toilet BLE",
-        "description": "Configure your Japanese smart toilet with BLE connectivity.\n\nYou'll need your toilet's MAC address:\n1. Use nRF Connect app on your phone to scan BLE devices\n2. Look for devices named 'Smart Toilet', 'BLE Toilet', or similar\n3. Note the MAC address (format: AA:BB:CC:DD:EE:FF)",
+        "description": "Configure your Japanese smart toilet with BLE connectivity.\n\nFound {device_count} BLE device(s). Select your toilet from the list or enter MAC address manually.\n\nTip: If your toilet doesn't appear in the list, make sure it's powered on and in pairing mode, then select 'Enter MAC address manually'.",
+        "data": {
+          "device_selection": "Select Device"
+        }
+      },
+      "manual": {
+        "title": "Manual MAC Address Entry",
+        "description": "Enter your toilet's MAC address manually.\n\nYou can find the MAC address:\n1. Using nRF Connect app on your phone\n2. In the original DM-Toilet-Control app\n3. Via bluetoothctl on Home Assistant",
         "data": {
           "name": "Name",
           "mac_address": "MAC Address (e.g., AA:BB:CC:DD:EE:FF)"

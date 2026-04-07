@@ -88,22 +88,39 @@ bluetoothctl
 1. Aller sur **Settings** → **Devices & Services**
 2. Cliquer sur **"+ Add Integration"** (en bas à droite)
 3. Chercher **"Smart Toilet BLE"** ou **"Smart Toilet"**
-4. Deux options:
+4. **Configuration en 2 options:**
 
-#### Option A: Saisie Manuelle
+#### Option A: Sélection via Scan BLE (Recommandé)
 
-```
-Name: Smart Toilet
-MAC Address: AA:BB:CC:DD:EE:FF  (remplacer par votre adresse)
-→ Submit
-```
+Le scan affiche automatiquement tous les appareils BLE découverts par Home Assistant:
 
-#### Option B: Scan BLE
+1. **Sélectionner votre WC** dans la liste déroulante
+   - Format: `Nom - AA:BB:CC:DD:EE:FF (RSSI: -65)`
+   - Le RSSI indique la force du signal (plus proche de 0 = meilleur)
+   
+2. Cliquer sur **"Submit"**
 
-1. Cliquer sur **"Scan for devices"**
-2. Attendre ~10 secondes
-3. Sélectionner vos WC dans la liste
-4. Submit
+**💡 Astuce:** Si vos WC n'apparaissent pas dans la liste:
+- Vérifiez qu'ils sont allumés et en mode BLE
+- Attendez quelques secondes que HA les découvre
+- Utilisez l'option manuelle ci-dessous
+
+#### Option B: Saisie Manuelle de l'Adresse MAC
+
+Si le scan ne trouve pas vos WC ou si vous connaissez déjà l'adresse MAC:
+
+1. Sélectionner **"✏️ Enter MAC address manually"** dans la liste
+2. Entrer les informations:
+   ```
+   Name: Smart Toilet
+   MAC Address: AA:BB:CC:DD:EE:FF
+   ```
+3. Cliquer sur **"Submit"**
+
+**Comment trouver l'adresse MAC:**
+- **Via nRF Connect** (app gratuite): Scanner → Noter l'adresse
+- **Via l'app originale** DM-Toilet-Control: Affichée lors de la connexion
+- **Via SSH sur HA**: `bluetoothctl` → `scan on` → Attendre 10s → `scan off`
 
 ### Étape 6: Vérifier
 
