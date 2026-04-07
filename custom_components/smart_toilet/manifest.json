@@ -15,6 +15,5 @@
       "manufacturer_id": true
     }
   ],
-  "loggers": ["bleak", "bleak_retry_connector"],
-  "icon": "mdi:toilet"
+  "loggers": ["bleak", "bleak_retry_connector"]
 }
