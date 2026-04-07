@@ -1,0 +1,130 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Smart Toilet BLE",
+        "description": "Configure your Japanese smart toilet with BLE connectivity.\n\nFirst, you'll need to find your toilet's MAC address:\n1. Use a BLE scanner app (nRF Connect) on your phone\n2. Or use the scan option below\n3. Look for devices named 'Smart Toilet', 'BLE Toilet', or similar",
+        "data": {
+          "name": "Name",
+          "mac_address": "MAC Address (e.g., AA:BB:CC:DD:EE:FF)"
+        }
+      },
+      "scan": {
+        "title": "Scan for BLE Devices",
+        "description": "Scanning for nearby BLE devices...\n\nMake sure your toilet is powered on and in pairing mode.",
+        "data": {
+          "mac_address": "Select your toilet"
+        }
+      }
+    },
+    "error": {
+      "invalid_mac": "Invalid MAC address format. Use format: AA:BB:CC:DD:EE:FF",
+      "cannot_connect": "Failed to connect to the toilet. Check MAC address and ensure toilet is powered on.",
+      "unknown": "Unexpected error occurred.",
+      "already_configured": "This toilet is already configured.",
+      "no_devices_found": "No BLE devices found. Make sure your toilet is powered on and try again.",
+      "scan_failed": "Failed to scan for devices: {error}"
+    },
+    "abort": {
+      "already_configured": "This toilet is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Smart Toilet Options",
+        "data": {
+          "name": "Device Name"
+        }
+      }
+    }
+  },
+  "entity": {
+    "switch": {
+      "toilet_light": {
+        "name": "Light"
+      },
+      "toilet_power": {
+        "name": "Power"
+      },
+      "toilet_eco": {
+        "name": "ECO Mode"
+      },
+      "toilet_foam": {
+        "name": "Foam Shield"
+      },
+      "toilet_auto": {
+        "name": "Auto Mode"
+      },
+      "toilet_women_wash": {
+        "name": "Women's Wash"
+      },
+      "toilet_butt_wash": {
+        "name": "Butt Wash"
+      },
+      "toilet_child_wash": {
+        "name": "Child Wash"
+      },
+      "toilet_massage": {
+        "name": "Massage"
+      },
+      "toilet_dry": {
+        "name": "Blow Dry"
+      },
+      "toilet_cover": {
+        "name": "Toilet Cover"
+      },
+      "toilet_ring": {
+        "name": "Toilet Ring"
+      }
+    },
+    "button": {
+      "toilet_flush": {
+        "name": "Flush"
+      },
+      "toilet_stop": {
+        "name": "Stop All"
+      },
+      "toilet_self_clean": {
+        "name": "Self Clean"
+      }
+    },
+    "sensor": {
+      "connection": {
+        "name": "Connection Status"
+      },
+      "seat_temp": {
+        "name": "Seat Temperature Level"
+      },
+      "water_temp": {
+        "name": "Water Temperature Level"
+      },
+      "wind_temp": {
+        "name": "Wind Temperature Level"
+      },
+      "pressure": {
+        "name": "Water Pressure Level"
+      },
+      "position": {
+        "name": "Nozzle Position Level"
+      }
+    },
+    "number": {
+      "seat_temp": {
+        "name": "Seat Temperature"
+      },
+      "water_temp": {
+        "name": "Water Temperature"
+      },
+      "wind_temp": {
+        "name": "Wind Temperature"
+      },
+      "pressure": {
+        "name": "Water Pressure"
+      },
+      "position": {
+        "name": "Nozzle Position"
+      }
+    }
+  }
+}
