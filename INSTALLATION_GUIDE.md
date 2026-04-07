@@ -8,16 +8,16 @@
 
 ```bash
 # Créer le dossier dans Home Assistant
-mkdir -p /config/custom_components/smart_toilet
+mkdir -p /config/custom_components/smart_toilet_ble
 
-# Copier TOUS les fichiers du dossier custom_components/smart_toilet/
-# vers /config/custom_components/smart_toilet/
+# Copier TOUS les fichiers du dossier custom_components/smart_toilet_ble/
+# vers /config/custom_components/smart_toilet_ble/
 ```
 
 **Structure à obtenir:**
 ```
 /config/custom_components/
-└── smart_toilet/
+└── smart_toilet_ble/
     ├── __init__.py          ✅ (coordinateur BLE)
     ├── button.py            ✅ (3 boutons)
     ├── config_flow.py       ✅ (configuration UI)
@@ -31,6 +31,8 @@ mkdir -p /config/custom_components/smart_toilet
     ├── services.yaml        ✅ (services)
     ├── hacs.json            ✅ (HACS)
     ├── smart-toilet.png     ✅ (icône)
+    ├── brand/               ✅ (icône HA 2026.3+)
+    │   └── icon.png
     └── README.md            ✅ (documentation)
 ```
 
@@ -47,7 +49,7 @@ ha core restart
 **⚠️ Icône de l'intégration:**
 L'intégration inclut une icône personnalisée dans le dossier `brand/`.
 Pour Home Assistant 2024.8+:
-- L'icône s'affiche automatiquement depuis `custom_components/smart_toilet/brand/icon.png`
+- L'icône s'affiche automatiquement depuis `custom_components/smart_toilet_ble/brand/icon.png`
 - Si vous voyez "icon not available":
   1. Vérifiez que HA est en version 2024.8+
   2. Redémarrez complètement HA
@@ -171,11 +173,11 @@ Les entités apparaissent automatiquement:
 **Solution:**
 ```bash
 # Vérifier que les fichiers sont bien placés
-ls -la /config/custom_components/smart_toilet/
+ls -la /config/custom_components/smart_toilet_ble/
 ```
 
 Si les fichiers ne sont pas là:
-1. Recopier tout le dossier `custom_components/smart_toilet/`
+1. Recopier tout le dossier `custom_components/smart_toilet_ble/`
 2. Redémarrer HA
 3. Vider cache navigateur (Ctrl+Shift+R)
 
@@ -235,7 +237,7 @@ bluetoothctl
 
 **Vérifier les logs:**
 - Settings → System → Logs
-- Chercher "smart_toilet"
+- Chercher "smart_toilet_ble"
 
 **Erreurs courantes:**
 
@@ -264,7 +266,7 @@ bluetoothctl
 
 2. **Supprimer les fichiers:**
    ```bash
-   rm -rf /config/custom_components/smart_toilet
+   rm -rf /config/custom_components/smart_toilet_ble
    ```
 
 3. **Redémarrer HA**
@@ -273,7 +275,7 @@ bluetoothctl
 
 ## ✅ Checklist d'Installation
 
-- [ ] Dossier `custom_components/smart_toilet/` copié dans `/config/`
+- [ ] Dossier `custom_components/smart_toilet_ble/` copié dans `/config/`
 - [ ] Tous les 14 fichiers sont présents
 - [ ] Home Assistant redémarré
 - [ ] Cache navigateur vidé (Ctrl+Shift+R)

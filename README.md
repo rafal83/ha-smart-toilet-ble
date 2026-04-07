@@ -18,8 +18,8 @@ Intégration Home Assistant complète avec interface UI pour contrôler vos WC j
 
 ### 1. Copier les fichiers
 ```bash
-# Copier le dossier custom_components/smart_toilet/
-# vers /config/custom_components/smart_toilet/ dans HA
+# Copier le dossier custom_components/smart_toilet_ble/
+# vers /config/custom_components/smart_toilet_ble/ dans HA
 ```
 
 ### 2. Redémarrer HA

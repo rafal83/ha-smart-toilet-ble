@@ -1,5 +1,5 @@
 {
-  "domain": "smart_toilet",
+  "domain": "smart_toilet_ble",
   "name": "Smart Toilet BLE",
   "codeowners": ["@rafal83"],
   "config_flow": true,

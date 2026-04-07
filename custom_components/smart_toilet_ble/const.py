@@ -1,6 +1,6 @@
 """Constants for Smart Toilet BLE integration."""
 
-DOMAIN = "smart_toilet"
+DOMAIN = "smart_toilet_ble"
 MANUFACTURER = "Smart Toilet"
 
 # BLE Configuration
