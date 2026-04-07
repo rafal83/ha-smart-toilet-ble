@@ -1,6 +1,9 @@
 """Constants for Smart Toilet BLE integration."""
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import dataclass, field
 from typing import Optional
+
 from homeassistant.components.sensor import SensorStateClass
 
 DOMAIN = "smart_toilet_ble"
@@ -43,8 +46,26 @@ class SwitchDefinition:
     has_state: bool = True
 
 
-# All toilet commands registry
-TOILET_COMMANDS = {
+@dataclass
+class ToiletModel:
+    """Defines a toilet model with its specific commands and features."""
+    id: str
+    name: str
+    description: str
+    commands: dict[str, ToiletCommand]
+    features: list[str] = field(default_factory=list)  # Features supported by this model
+    manufacturer: str = "Generic"
+    # BLE UUIDs (can be model-specific)
+    service_uuid: str = SERVICE_UUID
+    write_char_uuid: str = WRITE_CHAR_UUID
+
+
+# ============================================================================
+# TOILET MODELS REGISTRY
+# ============================================================================
+
+# Generic Japanese Toilet (default)
+GENERIC_JAPANESE_COMMANDS = {
     # Basic controls
     "light_on": ToiletCommand("light_on", "Light On", 0x01, 0x01, "basic"),
     "light_off": ToiletCommand("light_off", "Light Off", 0x01, 0x00, "basic"),
@@ -59,7 +80,7 @@ TOILET_COMMANDS = {
     "auto_off": ToiletCommand("auto_off", "Auto Mode Off", 0x06, 0x00, "basic"),
     "self_clean": ToiletCommand("self_clean", "Self Clean", 0x07, 0x01, "cleaning"),
     
-    # Washing functions (momentary - no off state)
+    # Washing functions
     "women_wash": ToiletCommand("women_wash", "Women's Wash", 0x10, 0x01, "wash"),
     "butt_wash": ToiletCommand("butt_wash", "Butt Wash", 0x11, 0x01, "wash"),
     "child_wash": ToiletCommand("child_wash", "Child Wash", 0x12, 0x01, "wash"),
@@ -77,7 +98,104 @@ TOILET_COMMANDS = {
     "dry_off": ToiletCommand("dry_off", "Blow Dry Off", 0x31, 0x00, "cleaning"),
 }
 
-# Switch definitions - references to TOILET_COMMANDS
+# TOTO Washlet (example with different command codes)
+TOTO_WASHLET_COMMANDS = {
+    # TOTO uses different function codes
+    "light_on": ToiletCommand("light_on", "Light On", 0x11, 0x01, "basic"),
+    "light_off": ToiletCommand("light_off", "Light Off", 0x11, 0x00, "basic"),
+    "power_on": ToiletCommand("power_on", "Power On", 0x12, 0x01, "basic"),
+    "power_off": ToiletCommand("power_off", "Power Off", 0x12, 0x00, "basic"),
+    "eco_on": ToiletCommand("eco_on", "ECO Mode On", 0x13, 0x01, "basic"),
+    "eco_off": ToiletCommand("eco_off", "ECO Mode Off", 0x13, 0x00, "basic"),
+    "foam_on": ToiletCommand("foam_on", "Foam Shield On", 0x14, 0x01, "basic"),
+    "foam_off": ToiletCommand("foam_off", "Foam Shield Off", 0x14, 0x00, "basic"),
+    "stop": ToiletCommand("stop", "Stop All", 0x15, 0x00, "basic"),
+    "auto_on": ToiletCommand("auto_on", "Auto Mode On", 0x16, 0x01, "basic"),
+    "auto_off": ToiletCommand("auto_off", "Auto Mode Off", 0x16, 0x00, "basic"),
+    "self_clean": ToiletCommand("self_clean", "Self Clean", 0x17, 0x01, "cleaning"),
+    
+    "women_wash": ToiletCommand("women_wash", "Women's Wash", 0x20, 0x01, "wash"),
+    "butt_wash": ToiletCommand("butt_wash", "Butt Wash", 0x21, 0x01, "wash"),
+    "child_wash": ToiletCommand("child_wash", "Child Wash", 0x22, 0x01, "wash"),
+    "massage": ToiletCommand("massage", "Massage", 0x23, 0x01, "wash"),
+    
+    "cover_open": ToiletCommand("cover_open", "Cover Open", 0x30, 0x01, "cover"),
+    "cover_close": ToiletCommand("cover_close", "Cover Close", 0x30, 0x00, "cover"),
+    "ring_open": ToiletCommand("ring_open", "Ring Open", 0x31, 0x01, "cover"),
+    "ring_close": ToiletCommand("ring_close", "Ring Close", 0x31, 0x00, "cover"),
+    
+    "flush": ToiletCommand("flush", "Flush", 0x40, 0x01, "cleaning"),
+    "dry_on": ToiletCommand("dry_on", "Blow Dry On", 0x41, 0x01, "cleaning"),
+    "dry_off": ToiletCommand("dry_off", "Blow Dry Off", 0x41, 0x00, "cleaning"),
+}
+
+# LIXIL SATIS (another example)
+LIXIL_SATIS_COMMANDS = {
+    # LIXIL uses yet another set of codes
+    "light_on": ToiletCommand("light_on", "Light On", 0x51, 0x01, "basic"),
+    "light_off": ToiletCommand("light_off", "Light Off", 0x51, 0x00, "basic"),
+    "power_on": ToiletCommand("power_on", "Power On", 0x52, 0x01, "basic"),
+    "power_off": ToiletCommand("power_off", "Power Off", 0x52, 0x00, "basic"),
+    "eco_on": ToiletCommand("eco_on", "ECO Mode On", 0x53, 0x01, "basic"),
+    "eco_off": ToiletCommand("eco_off", "ECO Mode Off", 0x53, 0x00, "basic"),
+    "foam_on": ToiletCommand("foam_on", "Foam Shield On", 0x54, 0x01, "basic"),
+    "foam_off": ToiletCommand("foam_off", "Foam Shield Off", 0x54, 0x00, "basic"),
+    "stop": ToiletCommand("stop", "Stop All", 0x55, 0x00, "basic"),
+    "auto_on": ToiletCommand("auto_on", "Auto Mode On", 0x56, 0x01, "basic"),
+    "auto_off": ToiletCommand("auto_off", "Auto Mode Off", 0x56, 0x00, "basic"),
+    "self_clean": ToiletCommand("self_clean", "Self Clean", 0x57, 0x01, "cleaning"),
+    
+    "women_wash": ToiletCommand("women_wash", "Women's Wash", 0x60, 0x01, "wash"),
+    "butt_wash": ToiletCommand("butt_wash", "Butt Wash", 0x61, 0x01, "wash"),
+    "child_wash": ToiletCommand("child_wash", "Child Wash", 0x62, 0x01, "wash"),
+    "massage": ToiletCommand("massage", "Massage", 0x63, 0x01, "wash"),
+    
+    "cover_open": ToiletCommand("cover_open", "Cover Open", 0x70, 0x01, "cover"),
+    "cover_close": ToiletCommand("cover_close", "Cover Close", 0x70, 0x00, "cover"),
+    "ring_open": ToiletCommand("ring_open", "Ring Open", 0x71, 0x01, "cover"),
+    "ring_close": ToiletCommand("ring_close", "Ring Close", 0x71, 0x00, "cover"),
+    
+    "flush": ToiletCommand("flush", "Flush", 0x80, 0x01, "cleaning"),
+    "dry_on": ToiletCommand("dry_on", "Blow Dry On", 0x81, 0x01, "cleaning"),
+    "dry_off": ToiletCommand("dry_off", "Blow Dry Off", 0x81, 0x00, "cleaning"),
+}
+
+# All supported models
+TOILET_MODELS: dict[str, ToiletModel] = {
+    "generic_japanese": ToiletModel(
+        id="generic_japanese",
+        name="Generic Japanese Toilet",
+        description="Standard Japanese smart toilet with BLE control",
+        commands=GENERIC_JAPANESE_COMMANDS,
+        features=["light", "power", "eco", "foam", "auto", "wash", "cover", "flush", "dry"],
+        manufacturer="Generic",
+    ),
+    "toto_washlet": ToiletModel(
+        id="toto_washlet",
+        name="TOTO Washlet",
+        description="TOTO Washlet with advanced bidet functions",
+        commands=TOTO_WASHLET_COMMANDS,
+        features=["light", "power", "eco", "foam", "auto", "wash", "cover", "flush", "dry", "ewater+"],
+        manufacturer="TOTO",
+    ),
+    "lixil_satis": ToiletModel(
+        id="lixil_satis",
+        name="LIXIL SATIS",
+        description="LIXIL SATIS smart toilet with auto features",
+        commands=LIXIL_SATIS_COMMANDS,
+        features=["light", "power", "eco", "auto", "wash", "cover", "flush", "dry"],
+        manufacturer="LIXIL",
+    ),
+}
+
+# Default model
+DEFAULT_MODEL = "generic_japanese"
+
+# ============================================================================
+# ENTITY DEFINITIONS (model-agnostic, use command names)
+# ============================================================================
+
+# Switch definitions - references to command names (resolved per model)
 SWITCH_DEFINITIONS = [
     SwitchDefinition("light", "Light", "light_on", "light_off"),
     SwitchDefinition("power", "Power", "power_on", "power_off"),
@@ -93,7 +211,7 @@ SWITCH_DEFINITIONS = [
     SwitchDefinition("ring", "Toilet Ring", "ring_open", "ring_close"),
 ]
 
-# Button definitions - references to TOILET_COMMANDS
+# Button definitions - references to command names
 BUTTON_DEFINITIONS = [
     ("flush", "Flush", "flush"),
     ("stop", "Stop All", "stop"),
@@ -157,3 +275,29 @@ ICONS = {
     "position": "mdi:axis-arrow",
     "connection": "mdi:bluetooth-connect",
 }
+
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+def get_model(model_id: str | None = None) -> ToiletModel:
+    """Get a toilet model by ID, or default if not found."""
+    if model_id and model_id in TOILET_MODELS:
+        return TOILET_MODELS[model_id]
+    return TOILET_MODELS[DEFAULT_MODEL]
+
+
+def get_model_commands(model_id: str | None = None) -> dict[str, ToiletCommand]:
+    """Get commands for a specific model."""
+    return get_model(model_id).commands
+
+
+def get_model_features(model_id: str | None = None) -> list[str]:
+    """Get supported features for a model."""
+    return get_model(model_id).features
+
+
+def command_exists(command_name: str, model_id: str | None = None) -> bool:
+    """Check if a command exists for a model."""
+    return command_name in get_model_commands(model_id)

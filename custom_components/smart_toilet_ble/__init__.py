@@ -17,11 +17,12 @@ from .const import (
     CONNECT_TIMEOUT,
     DOMAIN,
     RECONNECT_INTERVAL,
-    SERVICE_UUID,
     WRITE_CHAR_UUID,
     TOILET_COMMANDS,
     TEMP_FUNCTIONS,
     PRESSURE_FUNCTION,
+    get_model,
+    get_model_commands,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -59,10 +60,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Handle send BLE command service."""
         command_name = call.data.get("command", "")
         
-        if command := TOILET_COMMANDS.get(command_name):
+        # Get model-specific commands
+        commands = coordinator.commands
+        if command := commands.get(command_name):
             await coordinator.send_toilet_command(command.function, command.param)
         else:
-            _LOGGER.warning("Unknown command: %s", command_name)
+            _LOGGER.warning("Unknown command: %s (model: %s)", command_name, coordinator.model_id)
 
     async def async_handle_set_temperature(call) -> None:
         """Handle set temperature service."""
@@ -81,11 +84,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def async_handle_flush(call) -> None:
         """Handle flush service."""
-        await coordinator.send_toilet_command(TOILET_COMMANDS["flush"].function, TOILET_COMMANDS["flush"].param)
+        flush_cmd = coordinator.commands.get("flush")
+        if flush_cmd:
+            await coordinator.send_toilet_command(flush_cmd.function, flush_cmd.param)
 
     async def async_handle_stop_all(call) -> None:
         """Handle stop all service."""
-        await coordinator.send_toilet_command(TOILET_COMMANDS["stop"].function, TOILET_COMMANDS["stop"].param)
+        stop_cmd = coordinator.commands.get("stop")
+        if stop_cmd:
+            await coordinator.send_toilet_command(stop_cmd.function, stop_cmd.param)
 
     # Register all services
     services = {
@@ -132,11 +139,18 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
         self._entry = entry
         self._mac_address = entry.data["mac_address"]
         self._device_name = entry.data.get("name", "Smart Toilet")
+        
+        # Model-specific configuration
+        self._model_id = entry.data.get("model", "generic_japanese")
+        self._model = get_model(self._model_id)
+        self._commands = get_model_commands(self._model_id)
+        
         self._ble_device: BLEDevice | None = None
         self._client: BleakClient | None = None
         self._is_connected = False
         self._reconnect_task = None
         self._connection_lock = asyncio.Lock()
+        
         # Track last set values for sensors
         self._last_values: dict[str, int] = {
             "seat_temp": 0,
@@ -145,6 +159,21 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
             "pressure": 0,
             "position": 0,
         }
+
+    @property
+    def model_id(self) -> str:
+        """Return the model ID."""
+        return self._model_id
+
+    @property
+    def model(self) -> Any:
+        """Return the model configuration."""
+        return self._model
+
+    @property
+    def commands(self) -> dict[str, Any]:
+        """Return model-specific commands."""
+        return self._commands
 
     async def async_connect(self) -> None:
         """Connect to the BLE device using bleak-retry-connector."""
@@ -167,11 +196,16 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
                 return
             
             _LOGGER.debug(
-                "Connecting to %s via bleak-retry-connector", 
-                self._mac_address
+                "Connecting to %s (model: %s) via bleak-retry-connector", 
+                self._mac_address,
+                self._model_id
             )
             
             try:
+                # Use model-specific UUIDs if defined
+                service_uuid = self._model.service_uuid if hasattr(self._model, 'service_uuid') else "0000ffe0-0000-1000-8000-00805f9b34fb"
+                write_char_uuid = self._model.write_char_uuid if hasattr(self._model, 'write_char_uuid') else "0000ffe1-0000-1000-8000-00805f9b34fb"
+                
                 # Use bleak-retry-connector for reliable connection
                 self._client = await establish_connection(
                     BleakClient,
@@ -181,7 +215,12 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
                 )
                 
                 self._is_connected = True
-                _LOGGER.info("✓ Connected to Smart Toilet at %s", self._mac_address)
+                _LOGGER.info(
+                    "✓ Connected to %s at %s (model: %s)", 
+                    self._model.name,
+                    self._mac_address,
+                    self._model_id
+                )
                 self.async_set_updated_data({})
                 
             except Exception as err:
