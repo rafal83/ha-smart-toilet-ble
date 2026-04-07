@@ -1,19 +1,19 @@
 {
   "domain": "smart_toilet_ble",
   "name": "Smart Toilet BLE",
-  "codeowners": ["@rafal83"],
-  "config_flow": true,
-  "dependencies": ["bluetooth_adapters", "bluetooth"],
-  "documentation": "https://github.com/rafal83/smart_toilet_ble",
-  "iot_class": "local_push",
-  "issue_tracker": "https://github.com/rafal83/smart_toilet_ble/issues",
-  "requirements": ["bleak>=0.20.0"],
-  "version": "1.1.0",
   "bluetooth": [
     {
       "connectable": true,
       "manufacturer_id": true
     }
   ],
-  "loggers": ["bleak", "bleak_retry_connector"]
+  "codeowners": ["@rafal83"],
+  "config_flow": true,
+  "dependencies": ["bluetooth_adapters", "bluetooth"],
+  "documentation": "https://github.com/rafal83/smart-toilet-ble",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/rafal83/smart-toilet-ble/issues",
+  "loggers": ["bleak", "bleak_retry_connector"],
+  "requirements": ["bleak>=0.20.0"],
+  "version": "1.1.0"
 }
