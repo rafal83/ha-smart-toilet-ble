@@ -44,6 +44,12 @@ mkdir -p /config/custom_components/smart_toilet
 ha core restart
 ```
 
+**⚠️ Important pour l'icône:**
+HA met en cache les icônes d'intégration. Pour voir l'icône `smart-toilet.png`:
+1. Redémarrer complètement HA (pas juste recharger la config)
+2. Vider le cache du navigateur (Ctrl+Shift+R)
+3. Si l'icône n'apparaît toujours pas, aller dans **Developer Tools → Services** et appeler `homeassistant.reload_core_config`
+
 ### Étape 3: Vider le Cache du Navigateur
 
 **Important!** HA met en cache les intégrations.
