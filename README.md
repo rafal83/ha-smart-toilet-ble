@@ -2,6 +2,13 @@
 
 Intégration Home Assistant complète avec interface UI pour contrôler vos WC japonais via BLE.
 
+[![HACS Badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
+[![Version](https://img.shields.io/github/v/release/rafal83/smart-toilet-ble?style=for-the-badge&color=green)](https://github.com/rafal83/smart-toilet-ble/releases)
+[![License](https://img.shields.io/github/license/rafal83/smart-toilet-ble?style=for-the-badge)](LICENSE)
+
+[![Ajouter à HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rafal83&repository=smart-toilet-ble&category=integration)
+[![Configurer l'intégration](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=smart_toilet_ble)
+
 ## ✨ Fonctionnalités
 
 - ✅ **Configuration via UI** (pas de YAML !)
