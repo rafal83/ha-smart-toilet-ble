@@ -42,29 +42,107 @@ def create_command(cmd_type: int, function: int, param1: int = 0, param2: int = 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Smart Toilet BLE from a config entry."""
     coordinator = SmartToiletCoordinator(hass, entry)
-    
+
     # Don't wait for connection - let it connect in background
     # This prevents setup from failing if device is temporarily unavailable
     hass.async_create_background_task(
         coordinator.async_connect(),
         f"smart_toilet_connect_{entry.entry_id}"
     )
-    
+
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
-    
+
+    # Register services
+    async def async_handle_send_command(call) -> None:
+        """Handle send BLE command service."""
+        command_name = call.data.get("command", "")
+        level = call.data.get("level", 0)
+        
+        command_map = {
+            "light_on": (0x01, 0x01),
+            "light_off": (0x01, 0x00),
+            "power_on": (0x02, 0x01),
+            "power_off": (0x02, 0x00),
+            "eco_on": (0x03, 0x01),
+            "eco_off": (0x03, 0x00),
+            "foam_on": (0x04, 0x01),
+            "foam_off": (0x04, 0x00),
+            "stop": (0x05, 0x00),
+            "auto_on": (0x06, 0x01),
+            "auto_off": (0x06, 0x00),
+            "self_clean": (0x07, 0x01),
+            "flush": (0x30, 0x01),
+        }
+        
+        if command_name in command_map:
+            func, param = command_map[command_name]
+            await coordinator.send_toilet_command(func, param)
+        elif command_name in ("women_wash", "butt_wash", "child_wash", "massage"):
+            func_map = {
+                "women_wash": 0x10,
+                "butt_wash": 0x11,
+                "child_wash": 0x12,
+                "massage": 0x13,
+            }
+            await coordinator.send_toilet_command(func_map[command_name], 0x01)
+        else:
+            _LOGGER.warning("Unknown command: %s", command_name)
+
+    async def async_handle_set_temperature(call) -> None:
+        """Handle set temperature service."""
+        temp_type = call.data.get("type", "")
+        level = int(call.data.get("level", 0))
+        
+        type_map = {
+            "seat": 0x40,
+            "water": 0x41,
+            "wind": 0x42,
+        }
+        
+        if temp_type in type_map:
+            await coordinator.send_toilet_command(type_map[temp_type], level)
+        else:
+            _LOGGER.warning("Unknown temperature type: %s", temp_type)
+
+    async def async_handle_set_pressure(call) -> None:
+        """Handle set pressure service."""
+        level = int(call.data.get("level", 0))
+        await coordinator.send_toilet_command(0x43, level)
+
+    async def async_handle_flush(call) -> None:
+        """Handle flush service."""
+        await coordinator.send_toilet_command(0x30, 0x01)
+
+    async def async_handle_stop_all(call) -> None:
+        """Handle stop all service."""
+        await coordinator.send_toilet_command(0x05, 0x00)
+
+    hass.services.async_register(DOMAIN, "send_command", async_handle_send_command)
+    hass.services.async_register(DOMAIN, "set_temperature", async_handle_set_temperature)
+    hass.services.async_register(DOMAIN, "set_pressure", async_handle_set_pressure)
+    hass.services.async_register(DOMAIN, "flush", async_handle_flush)
+    hass.services.async_register(DOMAIN, "stop_all", async_handle_stop_all)
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    
+
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    
+
     if unload_ok:
+        # Unregister services
+        hass.services.async_remove(DOMAIN, "send_command")
+        hass.services.async_remove(DOMAIN, "set_temperature")
+        hass.services.async_remove(DOMAIN, "set_pressure")
+        hass.services.async_remove(DOMAIN, "flush")
+        hass.services.async_remove(DOMAIN, "stop_all")
+        
         coordinator = hass.data[DOMAIN].pop(entry.entry_id)
         await coordinator.async_disconnect()
-    
+
     return unload_ok
 
 

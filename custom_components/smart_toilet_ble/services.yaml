@@ -1,0 +1,108 @@
+# Smart Toilet BLE Services
+
+send_command:
+  name: Send BLE Command
+  description: Send a custom BLE command to the toilet (advanced users).
+  fields:
+    command:
+      name: Command
+      description: The command to send to the toilet.
+      example: "light_on"
+      required: true
+      selector:
+        select:
+          options:
+            - label: "Light On"
+              value: "light_on"
+            - label: "Light Off"
+              value: "light_off"
+            - label: "Power On"
+              value: "power_on"
+            - label: "Power Off"
+              value: "power_off"
+            - label: "ECO Mode On"
+              value: "eco_on"
+            - label: "ECO Mode Off"
+              value: "eco_off"
+            - label: "Foam Shield On"
+              value: "foam_on"
+            - label: "Foam Shield Off"
+              value: "foam_off"
+            - label: "Auto Mode On"
+              value: "auto_on"
+            - label: "Auto Mode Off"
+              value: "auto_off"
+            - label: "Self Clean"
+              value: "self_clean"
+            - label: "Stop All"
+              value: "stop"
+            - label: "Flush"
+              value: "flush"
+    level:
+      name: Level
+      description: Level for temperature/pressure commands (0-5). Leave empty for non-level commands.
+      example: "3"
+      required: false
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 5
+          step: 1
+          mode: slider
+
+set_temperature:
+  name: Set Temperature
+  description: Set the seat, water, or wind temperature level (0-5).
+  fields:
+    type:
+      name: Type
+      description: The type of temperature to set.
+      example: "seat"
+      required: true
+      selector:
+        select:
+          options:
+            - label: "Seat Temperature"
+              value: "seat"
+            - label: "Water Temperature"
+              value: "water"
+            - label: "Wind Temperature"
+              value: "wind"
+    level:
+      name: Level
+      description: Temperature level (0-5).
+      example: "3"
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 5
+          step: 1
+          mode: slider
+
+set_pressure:
+  name: Set Water Pressure
+  description: Set the water pressure level (0-5).
+  fields:
+    level:
+      name: Level
+      description: Water pressure level (0-5).
+      example: "3"
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 5
+          step: 1
+          mode: slider
+
+flush:
+  name: Flush Toilet
+  description: Trigger a toilet flush.
+  fields: {}
+
+stop_all:
+  name: Stop All Operations
+  description: Stop all ongoing toilet operations immediately.
+  fields: {}
