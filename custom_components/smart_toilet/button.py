@@ -57,7 +57,7 @@ class SmartToiletButton(SmartToiletEntity, ButtonEntity):
         
         self._button_id = button_id
         self._function = function
-        self._attr_name = f"{coordinator.mac_address.split(':')[-1]} - {name}"
+        self._attr_name = name
         self._attr_unique_id = f"{entry_id}_button_{button_id}"
         self._attr_icon = ICONS.get(button_id, "mdi:gesture-tap")
 

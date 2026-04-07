@@ -76,10 +76,11 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
         super().__init__(
             hass,
             _LOGGER,
-            name=f"Smart Toilet ({entry.data['mac_address']})",
+            name=entry.data.get("name", "Smart Toilet"),
         )
         self._entry = entry
         self._mac_address = entry.data["mac_address"]
+        self._device_name = entry.data.get("name", "Smart Toilet")
         self._ble_device: BLEDevice | None = None
         self._client: BleakClient | None = None
         self._is_connected = False
@@ -255,3 +256,8 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
     def mac_address(self) -> str:
         """Return the MAC address."""
         return self._mac_address
+
+    @property
+    def device_name(self) -> str:
+        """Return the device name."""
+        return self._device_name

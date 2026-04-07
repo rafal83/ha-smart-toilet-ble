@@ -77,7 +77,7 @@ class SmartToiletSwitch(SmartToiletEntity, SwitchEntity):
         self._on_param = on_param
         self._off_param = off_param
         self._has_state = has_state
-        self._attr_name = f"{coordinator.mac_address.split(':')[-1]} - {name}"
+        self._attr_name = name
         self._attr_unique_id = f"{entry_id}_switch_{switch_id}"
         self._attr_icon = ICONS.get(switch_id, "mdi:power")
         self._attr_assumed_state = not has_state

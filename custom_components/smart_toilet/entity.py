@@ -18,12 +18,12 @@ class SmartToiletEntity(CoordinatorEntity):
     ) -> None:
         """Initialize the entity."""
         super().__init__(coordinator)
-        
+
         self._entry_id = entry_id
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.mac_address)},
-            name=f"Smart Toilet ({coordinator.mac_address.split(':')[-1]})",
-            manufacturer="rafal83",
+            name=coordinator.device_name,
+            manufacturer="Smart Toilet",
             model="BLE Smart Toilet",
             sw_version="1.0",
         )

@@ -65,7 +65,7 @@ class SmartToiletNumber(SmartToiletEntity, NumberEntity):
         
         self._number_id = number_id
         self._function = function
-        self._attr_name = f"{coordinator.mac_address.split(':')[-1]} - {name}"
+        self._attr_name = name
         self._attr_unique_id = f"{entry_id}_number_{number_id}"
         self._attr_icon = ICONS.get(number_id, "mdi:gauge")
         self._attr_native_min_value = min_value
