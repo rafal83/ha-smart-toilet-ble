@@ -37,21 +37,25 @@ class SmartToiletNumber(SmartToiletEntity, NumberEntity):
         number_id: str,
         name: str,
         function: int,
+        min_value: int = 0,
+        max_value: int = 5,
+        step: int = 1,
+        unit: str = "level",
     ) -> None:
         """Initialize the number entity from definition."""
         super().__init__(coordinator, entry_id)
-        
+
         self._number_id = number_id
         self._function = function
-        
+
         self._attr_name = name
         self._attr_unique_id = f"{entry_id}_number_{number_id}"
         self._attr_icon = ICONS.get(number_id, "mdi:gauge")
-        self._attr_native_min_value = 0
-        self._attr_native_max_value = 5
-        self._attr_native_step = 1
+        self._attr_native_min_value = min_value
+        self._attr_native_max_value = max_value
+        self._attr_native_step = step
         self._attr_mode = NumberMode.SLIDER
-        self._attr_native_unit_of_measurement = "level"
+        self._attr_native_unit_of_measurement = unit
 
     @property
     def native_value(self) -> float:

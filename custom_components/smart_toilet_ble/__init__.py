@@ -14,8 +14,14 @@ from homeassistant.components.bluetooth import async_ble_device_from_address
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
+    CMD_TYPE_LIGHT,
     CONNECT_TIMEOUT,
     DOMAIN,
+    LIGHT_FUNCTION_BRIGHTNESS,
+    LIGHT_FUNCTION_MODE,
+    LIGHT_FUNCTION_ONOFF,
+    LIGHT_FUNCTION_RGB,
+    LIGHT_MODES,
     RECONNECT_INTERVAL,
     WRITE_CHAR_UUID,
     TEMP_FUNCTIONS,
@@ -27,7 +33,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 # Platforms to set up
-PLATFORMS = ["switch", "button", "sensor", "number"]
+PLATFORMS = ["light", "select", "switch", "button", "sensor", "number"]
 
 
 def calculate_checksum(command_bytes: list[int]) -> int:
@@ -93,6 +99,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if stop_cmd:
             await coordinator.send_toilet_command(stop_cmd.function, stop_cmd.param)
 
+    async def async_handle_set_light_color(call) -> None:
+        """Handle set light color service."""
+        r = int(call.data.get("red", 255))
+        g = int(call.data.get("green", 255))
+        b = int(call.data.get("blue", 255))
+        await coordinator.set_light_rgb((r, g, b))
+
     # Register all services
     services = {
         "send_command": async_handle_send_command,
@@ -100,6 +113,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "set_pressure": async_handle_set_pressure,
         "flush": async_handle_flush,
         "stop_all": async_handle_stop_all,
+        "set_light_color": async_handle_set_light_color,
     }
     
     for service_name, handler in services.items():
@@ -116,7 +130,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if unload_ok:
         # Unregister all services
-        for service_name in ["send_command", "set_temperature", "set_pressure", "flush", "stop_all"]:
+        for service_name in ["send_command", "set_temperature", "set_pressure", "flush", "stop_all", "set_light_color"]:
             hass.services.async_remove(DOMAIN, service_name)
         
         coordinator = hass.data[DOMAIN].pop(entry.entry_id)
@@ -157,7 +171,21 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
             "wind_temp": 0,
             "pressure": 0,
             "position": 0,
+            "lid_open_torque": 0,
+            "lid_close_torque": 0,
+            "ring_open_torque": 0,
+            "ring_close_torque": 0,
+            "volume": 0,
+            "flush_time": 0,
+            "radar_sensitivity": 0,
+            "auto_close_time": 0,
         }
+
+        # Track light state
+        self._light_on: bool = False
+        self._light_rgb: tuple[int, int, int] = (255, 255, 255)
+        self._light_brightness: int = 255  # HA uses 0-255
+        self._light_mode: str = "static"
 
     @property
     def model_id(self) -> str:
@@ -324,14 +352,80 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
             0x42: "wind_temp",
             0x43: "pressure",
             0x44: "position",
+            0x50: "lid_open_torque",
+            0x51: "lid_close_torque",
+            0x52: "ring_open_torque",
+            0x53: "ring_close_torque",
+            0x54: "volume",
+            0x55: "flush_time",
+            0x56: "radar_sensitivity",
+            0x57: "auto_close_time",
         }
-        
+
         if function in function_to_key:
             self._last_values[function_to_key[function]] = param1
             self.async_set_updated_data({})
-        
+
         command = create_command(0x02, function, param1, param2, param3)
         return await self.send_command(command)
+
+    async def send_light_command(self, function: int, param1: int = 0, param2: int = 0, param3: int = 0) -> bool:
+        """Send a light command (type 0x03)."""
+        command = create_command(CMD_TYPE_LIGHT, function, param1, param2, param3)
+        return await self.send_command(command)
+
+    async def turn_light_on(
+        self,
+        rgb: tuple[int, int, int] | None = None,
+        brightness: int | None = None,
+    ) -> bool:
+        """Turn the light on, optionally with RGB color and brightness."""
+        self._light_on = True
+        if rgb is not None:
+            self._light_rgb = rgb
+            await self.send_light_command(
+                LIGHT_FUNCTION_RGB,
+                self._light_rgb[0],
+                self._light_rgb[1],
+                self._light_rgb[2],
+            )
+        if brightness is not None:
+            self._light_brightness = brightness
+            # Convert HA 0-255 to device 0-100
+            device_brightness = round(brightness * 100 / 255)
+            await self.send_light_command(LIGHT_FUNCTION_BRIGHTNESS, device_brightness)
+        success = await self.send_light_command(LIGHT_FUNCTION_ONOFF, 0x01)
+        if success:
+            self.async_set_updated_data({})
+        return success
+
+    async def turn_light_off(self) -> bool:
+        """Turn the light off."""
+        self._light_on = False
+        success = await self.send_light_command(LIGHT_FUNCTION_ONOFF, 0x00)
+        if success:
+            self.async_set_updated_data({})
+        return success
+
+    async def set_light_rgb(self, rgb: tuple[int, int, int]) -> bool:
+        """Set the light RGB color."""
+        self._light_rgb = rgb
+        success = await self.send_light_command(
+            LIGHT_FUNCTION_RGB, rgb[0], rgb[1], rgb[2]
+        )
+        if success:
+            self.async_set_updated_data({})
+        return success
+
+    async def set_light_mode(self, mode: str) -> bool:
+        """Set the light effect mode."""
+        if mode not in LIGHT_MODES:
+            return False
+        self._light_mode = mode
+        success = await self.send_light_command(LIGHT_FUNCTION_MODE, LIGHT_MODES[mode])
+        if success:
+            self.async_set_updated_data({})
+        return success
 
     @property
     def is_connected(self) -> bool:

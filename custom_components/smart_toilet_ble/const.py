@@ -25,6 +25,32 @@ CMD_LENGTH = 0x08
 CMD_TYPE_TOILET = 0x02
 CMD_TYPE_LIGHT = 0x03
 
+# Light functions
+LIGHT_FUNCTION_ONOFF = 0x01
+LIGHT_FUNCTION_RGB = 0x02
+LIGHT_FUNCTION_MODE = 0x03
+LIGHT_FUNCTION_BRIGHTNESS = 0x04
+
+LIGHT_MODES = {
+    "static": 0x00,
+    "flashing": 0x01,
+    "breathing": 0x02,
+    "running_water": 0x03,
+    "colorful_gradient": 0x04,
+    "colorful_running": 0x05,
+    "welcome": 0x06,
+}
+
+LIGHT_MODE_LABELS = {
+    "static": "Static",
+    "flashing": "Flashing",
+    "breathing": "Breathing",
+    "running_water": "Running Water",
+    "colorful_gradient": "Colorful Gradient",
+    "colorful_running": "Colorful Running",
+    "welcome": "Welcome",
+}
+
 
 @dataclass
 class ToiletCommand:
@@ -96,6 +122,18 @@ GENERIC_JAPANESE_COMMANDS = {
     "flush": ToiletCommand("flush", "Flush", 0x30, 0x01, "cleaning"),
     "dry_on": ToiletCommand("dry_on", "Blow Dry On", 0x31, 0x01, "cleaning"),
     "dry_off": ToiletCommand("dry_off", "Blow Dry Off", 0x31, 0x00, "cleaning"),
+
+    # Advanced settings - On/Off switches
+    "auto_flush_on": ToiletCommand("auto_flush_on", "Auto Flush On", 0x58, 0x01, "advanced"),
+    "auto_flush_off": ToiletCommand("auto_flush_off", "Auto Flush Off", 0x58, 0x00, "advanced"),
+    "auto_foam_on": ToiletCommand("auto_foam_on", "Auto Foam On", 0x59, 0x01, "advanced"),
+    "auto_foam_off": ToiletCommand("auto_foam_off", "Auto Foam Off", 0x59, 0x00, "advanced"),
+    "auto_night_light_on": ToiletCommand("auto_night_light_on", "Auto Night Light On", 0x5A, 0x01, "advanced"),
+    "auto_night_light_off": ToiletCommand("auto_night_light_off", "Auto Night Light Off", 0x5A, 0x00, "advanced"),
+    "aging_mode_on": ToiletCommand("aging_mode_on", "Aging Mode On", 0x5B, 0x01, "advanced"),
+    "aging_mode_off": ToiletCommand("aging_mode_off", "Aging Mode Off", 0x5B, 0x00, "advanced"),
+    "virtual_seat_on": ToiletCommand("virtual_seat_on", "Virtual Seat On", 0x5C, 0x01, "advanced"),
+    "virtual_seat_off": ToiletCommand("virtual_seat_off", "Virtual Seat Off", 0x5C, 0x00, "advanced"),
 }
 
 # TOTO Washlet & LIXIL SATIS (Placeholder - Commandes réelles à trouver)
@@ -111,7 +149,7 @@ TOILET_MODELS: dict[str, ToiletModel] = {
         name="Generic Japanese Toilet",
         description="Standard Japanese smart toilet with BLE control (Verified from APK reverse-engineering)",
         commands=GENERIC_JAPANESE_COMMANDS,
-        features=["light", "power", "eco", "foam", "auto", "wash", "cover", "flush", "dry"],
+        features=["light", "rgb", "power", "eco", "foam", "auto", "wash", "cover", "flush", "dry", "auto_flush", "auto_foam", "auto_night_light", "aging_mode", "virtual_seat", "advanced_settings", "light_mode"],
         manufacturer="Generic",
     ),
     # Uncomment and update when real codes are discovered:
@@ -134,7 +172,6 @@ DEFAULT_MODEL = "generic_japanese"
 
 # Switch definitions - references to command names (resolved per model)
 SWITCH_DEFINITIONS = [
-    SwitchDefinition("light", "Light", "light_on", "light_off"),
     SwitchDefinition("power", "Power", "power_on", "power_off"),
     SwitchDefinition("eco", "ECO Mode", "eco_on", "eco_off"),
     SwitchDefinition("foam", "Foam Shield", "foam_on", "foam_off"),
@@ -146,6 +183,12 @@ SWITCH_DEFINITIONS = [
     SwitchDefinition("dry", "Blow Dry", "dry_on", "dry_off"),
     SwitchDefinition("cover", "Toilet Cover", "cover_open", "cover_close"),
     SwitchDefinition("ring", "Toilet Ring", "ring_open", "ring_close"),
+    # Advanced settings switches
+    SwitchDefinition("auto_flush", "Auto Flush", "auto_flush_on", "auto_flush_off"),
+    SwitchDefinition("auto_foam", "Auto Foam", "auto_foam_on", "auto_foam_off"),
+    SwitchDefinition("auto_night_light", "Auto Night Light", "auto_night_light_on", "auto_night_light_off"),
+    SwitchDefinition("aging_mode", "Aging Mode", "aging_mode_on", "aging_mode_off"),
+    SwitchDefinition("virtual_seat", "Virtual Seat", "virtual_seat_on", "virtual_seat_off"),
 ]
 
 # Button definitions - references to command names
@@ -165,13 +208,22 @@ SENSOR_DEFINITIONS = [
     ("position", "Nozzle Position Level", "position", None, "level", SensorStateClass.MEASUREMENT),
 ]
 
-# Number (slider) definitions
+# Number (slider) definitions: (id, name, function, min, max, step, unit)
 NUMBER_DEFINITIONS = [
-    ("seat_temp", "Seat Temperature", 0x40),
-    ("water_temp", "Water Temperature", 0x41),
-    ("wind_temp", "Wind Temperature", 0x42),
-    ("pressure", "Water Pressure", 0x43),
-    ("position", "Nozzle Position", 0x44),
+    ("seat_temp", "Seat Temperature", 0x40, 0, 5, 1, "level"),
+    ("water_temp", "Water Temperature", 0x41, 0, 5, 1, "level"),
+    ("wind_temp", "Wind Temperature", 0x42, 0, 5, 1, "level"),
+    ("pressure", "Water Pressure", 0x43, 0, 5, 1, "level"),
+    ("position", "Nozzle Position", 0x44, 0, 5, 1, "level"),
+    # Advanced settings - range values
+    ("lid_open_torque", "Lid Open Torque", 0x50, 0, 100, 1, "%"),
+    ("lid_close_torque", "Lid Close Torque", 0x51, 0, 100, 1, "%"),
+    ("ring_open_torque", "Ring Open Torque", 0x52, 0, 100, 1, "%"),
+    ("ring_close_torque", "Ring Close Torque", 0x53, 0, 100, 1, "%"),
+    ("volume", "Volume", 0x54, 0, 100, 1, "%"),
+    ("flush_time", "Flush Time", 0x55, 0, 100, 1, "%"),
+    ("radar_sensitivity", "Radar Sensitivity", 0x56, 0, 10, 1, "level"),
+    ("auto_close_time", "Auto Close Time", 0x57, 0, 100, 1, "%"),
 ]
 
 # Temperature and pressure control functions
@@ -211,6 +263,21 @@ ICONS = {
     "pressure": "mdi:gauge",
     "position": "mdi:axis-arrow",
     "connection": "mdi:bluetooth-connect",
+    # Advanced settings
+    "auto_flush": "mdi:water-sync",
+    "auto_foam": "mdi:chart-bubble",
+    "auto_night_light": "mdi:weather-night",
+    "aging_mode": "mdi:cog-outline",
+    "virtual_seat": "mdi:seat",
+    "lid_open_torque": "mdi:rotate-right",
+    "lid_close_torque": "mdi:rotate-left",
+    "ring_open_torque": "mdi:rotate-right",
+    "ring_close_torque": "mdi:rotate-left",
+    "volume": "mdi:volume-high",
+    "flush_time": "mdi:timer-outline",
+    "radar_sensitivity": "mdi:radar",
+    "auto_close_time": "mdi:timer-lock-outline",
+    "light_mode": "mdi:lightbulb-multiple",
 }
 
 

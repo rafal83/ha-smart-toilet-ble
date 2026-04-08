@@ -59,6 +59,26 @@ send_command:
               value: "dry_on"
             - label: "💨 Blow Dry Off"
               value: "dry_off"
+            - label: "🔄 Auto Flush On"
+              value: "auto_flush_on"
+            - label: "🔄 Auto Flush Off"
+              value: "auto_flush_off"
+            - label: "🫧 Auto Foam On"
+              value: "auto_foam_on"
+            - label: "🫧 Auto Foam Off"
+              value: "auto_foam_off"
+            - label: "🌙 Auto Night Light On"
+              value: "auto_night_light_on"
+            - label: "🌙 Auto Night Light Off"
+              value: "auto_night_light_off"
+            - label: "⚙️ Aging Mode On"
+              value: "aging_mode_on"
+            - label: "⚙️ Aging Mode Off"
+              value: "aging_mode_off"
+            - label: "💺 Virtual Seat On"
+              value: "virtual_seat_on"
+            - label: "💺 Virtual Seat Off"
+              value: "virtual_seat_off"
 
 set_temperature:
   name: Set Temperature
@@ -116,3 +136,41 @@ stop_all:
   name: Stop All Operations
   description: Immediately stop all ongoing toilet operations.
   fields: {}
+
+set_light_color:
+  name: Set Light Color
+  description: Set the RGB color of the toilet light.
+  fields:
+    red:
+      name: Red
+      description: Red channel (0-255).
+      example: "255"
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 255
+          step: 1
+          mode: slider
+    green:
+      name: Green
+      description: Green channel (0-255).
+      example: "255"
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 255
+          step: 1
+          mode: slider
+    blue:
+      name: Blue
+      description: Blue channel (0-255).
+      example: "255"
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 255
+          step: 1
+          mode: slider
