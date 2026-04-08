@@ -1,6 +1,6 @@
-# 🚽 Smart Toilet BLE - Intégration Home Assistant
+# Smart Toilet BLE - Home Assistant Integration
 
-Intégration Home Assistant complète avec interface UI pour contrôler vos WC japonais via BLE.
+Intégration Home Assistant pour contrôler vos WC intelligents via BLE. Supporte plusieurs protocoles et marques.
 
 [![HACS Badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![Version](https://img.shields.io/github/v/release/rafal83/ha-smart-toilet-ble?style=for-the-badge&color=green)](https://github.com/rafal83/ha-smart-toilet-ble/releases)
@@ -9,191 +9,151 @@ Intégration Home Assistant complète avec interface UI pour contrôler vos WC j
 [![Ajouter à HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rafal83&repository=ha-smart-toilet-ble&category=integration)
 [![Configurer l'intégration](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=smart_toilet_ble)
 
-## ✨ Fonctionnalités
+## Fonctionnalités
 
-- ✅ **Configuration via UI** (pas de YAML !)
-- ✅ **Scan BLE** intégré pour trouver vos WC
-- ✅ **Reconnexion automatique** avec `bleak-retry-connector`
-- ✅ **12 switches** prêts à l'emploi
-- ✅ **3 boutons** pour actions momentanées
-- ✅ **6 capteurs** (connexion, températures, pression, position)
-- ✅ **5 sliders** de contrôle (températures, pression, position)
-- ✅ **Dashboard-ready** avec icônes
-- ✅ **Support multi-WC** (ajouter plusieurs appareils)
+- **Configuration via UI** (pas de YAML)
+- **Scan BLE** intégré pour trouver vos WC
+- **Reconnexion automatique** avec `bleak-retry-connector`
+- **2 protocoles supportés** : DM (DM Smart Toilet) et SKS
+- **Lumière ambiante** avec RGB, luminosité et 7 modes d'effets
+- **Réglages avancés** : torque couvercle, volume, radar, etc.
+- **Dashboard-ready** avec icônes
+- **Support multi-WC** (plusieurs appareils)
 
-## 🚀 Installation Rapide
+## Modèles supportés
 
-### 1. Copier les fichiers
+| Modèle | Protocole | App d'origine | Description |
+|--------|-----------|---------------|-------------|
+| DM Smart Toilet | DM (`0xAA`, 8 octets fixes) | DM-Toilet-Control v1.0.6 | WC intelligents protocole DM |
+| SKS Smart Toilet | SKS (`0x33`, taille variable) | com.sks.toilet v1.1.3 | WC SKS avec fonctions étendues |
+
+## Installation Rapide
+
+### Via HACS (recommandé)
+1. HACS > Integrations > Menu "..." > Custom repositories
+2. Ajouter `https://github.com/rafal83/ha-smart-toilet-ble` en catégorie **Integration**
+3. Installer "Smart Toilet BLE"
+4. Redémarrer HA
+
+### Manuellement
 ```bash
 # Copier le dossier custom_components/smart_toilet_ble/
 # vers /config/custom_components/smart_toilet_ble/ dans HA
 ```
 
-### 2. Redémarrer HA
+### Configurer
 ```
-Settings → System → Restart → Restart
-```
-
-### 3. Vider le cache
-```
-Chrome/Edge: Ctrl + Shift + R
-Firefox: Ctrl + F5
+Settings > Devices & Services > Add Integration > "Smart Toilet BLE"
+1. Choisir le modèle (DM Smart Toilet ou SKS)
+2. Scanner ou entrer l'adresse MAC
 ```
 
-### 4. Ajouter via UI
-```
-Settings → Devices & Services → Add Integration
-Chercher "Smart Toilet BLE"
-Entrer MAC ou Scanner → Terminé ! 🎉
-```
+## Entités créées
 
-## 🎮 Entités Créées
+### DM Smart Toilet (protocole DM)
 
-### Switches (12)
-- `switch.smart_toilet_light` 💡 Lumière
-- `switch.smart_toilet_power` 🔌 Alimentation
-- `switch.smart_toilet_eco` 🍃 Mode ECO
-- `switch.smart_toilet_foam` 🫧 Mousse
-- `switch.smart_toilet_auto` 🔄 Mode auto
-- `switch.smart_toilet_women_wash` 🚿 Lavage féminin
-- `switch.smart_toilet_butt_wash` 💧 Lavage fessier
-- `switch.smart_toilet_child_wash` 👶 Lavage enfant
-- `switch.smart_toilet_massage` 💆 Massage
-- `switch.smart_toilet_dry` 💨 Séchage
-- `switch.smart_toilet_cover` 🚽 Couvercle
-- `switch.smart_toilet_ring` ⭕ Abattement
+**Light (1)** - Entité lumière HA avec roue de couleur
+- `light.smart_toilet_light` - On/Off, RGB, luminosité, mode d'effet
 
-### Buttons (3)
-- `button.smart_toilet_flush` 🌊 Chasser d'eau
-- `button.smart_toilet_stop` 🛑 Arrêt urgence
-- `button.smart_toilet_self_clean` 🧹 Auto-nettoyage
+**Select (1)**
+- `select.smart_toilet_light_mode` - Mode d'éclairage (Static, Flashing, Breathing, Running Water, Colorful Gradient, Colorful Running, Welcome)
 
-### Sensors (6)
-- `sensor.smart_toilet_connection_status` 📶 Statut connexion
-- `sensor.smart_toilet_seat_temperature_level` 🌡️ Niveau température siège (0-5)
-- `sensor.smart_toilet_water_temperature_level` 💧 Niveau température eau (0-5)
-- `sensor.smart_toilet_wind_temperature_level` 💨 Niveau température air (0-5)
-- `sensor.smart_toilet_water_pressure_level` 📊 Niveau pression eau (0-5)
-- `sensor.smart_toilet_nozzle_position_level` 🎯 Niveau position buse (0-5)
+**Switches (16)**
+- Power, ECO Mode, Foam Shield, Auto Mode
+- Women's Wash, Butt Wash, Child Wash, Massage
+- Blow Dry, Toilet Cover, Toilet Ring
+- Auto Flush, Auto Foam, Auto Night Light, Aging Mode, Virtual Seat
 
-### Numbers (5) - Sliders de Contrôle
-- `number.smart_toilet_seat_temperature` 🌡️ Contrôle température siège (0-5)
-- `number.smart_toilet_water_temperature` 💧 Contrôle température eau (0-5)
-- `number.smart_toilet_wind_temperature` 💨 Contrôle température air (0-5)
-- `number.smart_toilet_water_pressure` 📊 Contrôle pression eau (0-5)
-- `number.smart_toilet_nozzle_position` 🎯 Contrôle position buse (0-5)
+**Buttons (3)**
+- Flush, Stop All, Self Clean
 
-## 📊 Exemple de Dashboard
+**Numbers (13)** - Sliders de contrôle
+- Seat/Water/Wind Temperature (0-5)
+- Water Pressure, Nozzle Position (0-5)
+- Lid/Ring Open/Close Torque (0-100%)
+- Volume, Flush Time, Auto Close Time (0-100%)
+- Radar Sensitivity (0-10)
+
+**Sensors (1)**
+- Connection Status
+
+### SKS Smart Toilet (protocole SKS)
+
+**Switches (23)**
+- Foam Shield, Butt/Women's/Child/Assisted Wash, One-Click Clean, Moving Wash, Massage, Water Pattern
+- Blow Dry, Toilet Cover, Toilet Ring, Night Light, Ambient Light
+- Aromatherapy, Sterilization, Infrared Therapy
+- Auto Aroma/Foam/Deodorizer/Ambient Light, Flush on Leave, All-Season Heating
+- Moisturize, Radar, Foot Sensor, Energy Saving, Buzzer, Display, etc.
+
+**Buttons (6)**
+- Full Flush, Small Flush, Stop All, Self Clean, User Preset 1/2
+
+**Numbers (12)** - Sliders de contrôle
+- Nozzle Position, Water Pressure, Températures, Wind Speed
+- Radar/Flush Level, Cover/Ring Force, Post-Leave Flush Time, Auto Close Delay
+
+**Sensors (1)**
+- Connection Status
+
+## Exemple de Dashboard
 
 ```yaml
 type: vertical-stack
 cards:
-  # Contrôles principaux
+  - type: light
+    entity: light.smart_toilet_light
+
   - type: entities
-    title: 🚽 Smart Toilet - Contrôles
-    show_header_toggle: false
+    title: Contrôles
     entities:
-      - entity: switch.smart_toilet_light
       - entity: switch.smart_toilet_power
       - entity: switch.smart_toilet_eco
       - entity: button.smart_toilet_flush
       - entity: button.smart_toilet_stop
 
-  # Fonctions de lavage
   - type: horizontal-stack
     cards:
       - type: button
         entity: switch.smart_toilet_women_wash
         name: Féminin
-        icon: mdi:shower
         show_state: false
       - type: button
         entity: switch.smart_toilet_butt_wash
         name: Fessier
-        icon: mdi:water
         show_state: false
       - type: button
         entity: switch.smart_toilet_dry
         name: Séchage
-        icon: mdi:hair-dryer
         show_state: false
 
-  # Capteurs de statut
   - type: entities
-    title: 📊 Status
-    entities:
-      - entity: sensor.smart_toilet_connection_status
-      - entity: sensor.smart_toilet_seat_temperature_level
-      - entity: sensor.smart_toilet_water_temperature_level
-      - entity: sensor.smart_toilet_water_pressure_level
-
-  # Sliders de contrôle
-  - type: entities
-    title: 🎛️ Réglages
+    title: Réglages
     entities:
       - entity: number.smart_toilet_seat_temperature
       - entity: number.smart_toilet_water_temperature
-      - entity: number.smart_toilet_wind_temperature
       - entity: number.smart_toilet_water_pressure
       - entity: number.smart_toilet_nozzle_position
+      - entity: select.smart_toilet_light_mode
 ```
 
-## 🤖 Automatisations Exemples
-
-### Mode Nuit
-```yaml
-alias: "WC - Mode nuit"
-trigger:
-  - platform: time
-    at: "22:00:00"
-action:
-  - service: switch.turn_on
-    target:
-      entity_id: switch.smart_toilet_eco
-```
-
-### Chasse Automatique
-```yaml
-alias: "WC - Chasse auto après départ"
-trigger:
-  - platform: state
-    entity_id: binary_sensor.salle_de_bain_motion
-    from: "on"
-    to: "off"
-    for:
-      minutes: 2
-condition:
-  - condition: state
-    entity_id: switch.smart_toilet_power
-    state: "on"
-action:
-  - service: button.press
-    target:
-      entity_id: button.smart_toilet_flush
-```
-
-## 📖 Documentation
+## Documentation
 
 - [Guide d'installation détaillé](./INSTALLATION_GUIDE.md)
 - [Documentation du protocole BLE](./BLE_PROTOCOL_DOCUMENTATION.md)
 - [Référence rapide](./QUICK_REFERENCE.md)
-- [Documentation de l'intégration](./custom_components/smart_toilet_ble/README.md)
 
-## 🔧 Prérequis
+## Prérequis
 
-- Home Assistant 2023.8.0+
+- Home Assistant 2024.8.0+
 - Adaptateur BLE (intégré ou dongle USB)
 - Adresse MAC de vos WC
 
-## 🐛 Support
+## Support
 
-- **Logs HA**: Settings → System → Logs → Chercher "smart_toilet_ble"
-- **Documentation**: Voir fichiers dans `custom_components/smart_toilet_ble/`
+- **Logs HA**: Settings > System > Logs > Chercher "smart_toilet_ble"
+- **Issues**: [GitHub Issues](https://github.com/rafal83/ha-smart-toilet-ble/issues)
 
-## 📄 License
+## License
 
 MIT License
-
----
-
-**Profitez de vos WC connectés ! 🚽✨**

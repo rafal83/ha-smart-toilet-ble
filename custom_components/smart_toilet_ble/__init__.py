@@ -146,7 +146,7 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
         self._device_name = entry.data.get("name", "Smart Toilet")
 
         # Model-specific configuration
-        self._model_id = entry.data.get("model", "generic_japanese")
+        self._model_id = entry.data.get("model", "dm_smart_toilet")
         self._model = get_model(self._model_id)
         self._commands = get_model_commands(self._model_id)
         self._protocol = self._model.protocol

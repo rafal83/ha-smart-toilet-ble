@@ -133,10 +133,10 @@ def build_sks_command(function: int, params: list[int] | None = None) -> bytes:
 
 
 # ============================================================================
-# DM PROTOCOL MODEL (DM-Toilet-Control / Generic Japanese)
+# DM PROTOCOL MODEL (DM-Toilet-Control / DM Smart Toilet)
 # ============================================================================
 
-GENERIC_JAPANESE_COMMANDS = {
+DM_SMART_TOILET_COMMANDS = {
     # Basic controls
     "light_on": ToiletCommand("light_on", "Light On", 0x01, 0x01, "basic"),
     "light_off": ToiletCommand("light_off", "Light Off", 0x01, 0x00, "basic"),
@@ -348,15 +348,15 @@ SKS_NUMBER_DEFINITIONS = [
 # ============================================================================
 
 TOILET_MODELS: dict[str, ToiletModel] = {
-    "generic_japanese": ToiletModel(
-        id="generic_japanese",
-        name="Generic Japanese Toilet",
+    "dm_smart_toilet": ToiletModel(
+        id="dm_smart_toilet",
+        name="DM Smart Toilet",
         description="DM-Toilet-Control protocol (fixed 8-byte packets, header 0xAA)",
-        commands=GENERIC_JAPANESE_COMMANDS,
+        commands=DM_SMART_TOILET_COMMANDS,
         features=["light", "rgb", "power", "eco", "foam", "auto", "wash", "cover",
                   "flush", "dry", "auto_flush", "auto_foam", "auto_night_light",
                   "aging_mode", "virtual_seat", "advanced_settings", "light_mode"],
-        manufacturer="Generic",
+        manufacturer="DM",
         protocol=PROTOCOL_DM,
     ),
     "sks_toilet": ToiletModel(
@@ -380,7 +380,7 @@ TOILET_MODELS: dict[str, ToiletModel] = {
 }
 
 # Default model
-DEFAULT_MODEL = "generic_japanese"
+DEFAULT_MODEL = "dm_smart_toilet"
 
 
 # ============================================================================

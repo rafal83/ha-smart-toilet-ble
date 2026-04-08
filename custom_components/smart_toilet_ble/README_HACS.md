@@ -1,90 +1,60 @@
-# Smart Toilet BLE Integration for Home Assistant
+# Smart Toilet BLE - Home Assistant Integration
 
-Intégration Home Assistant complète avec interface UI (config flow) pour contrôler vos WC japonais via BLE.
+Intégration Home Assistant pour contrôler vos WC intelligents via BLE. Supporte les protocoles DM (DM Smart Toilet) et SKS.
 
-## ✨ Fonctionnalités
+## Fonctionnalités
 
-- ✅ **Installation via HACS** ou manuelle
-- ✅ **Configuration via UI** (pas de YAML à éditer !)
-- ✅ **Scan BLE** intégré pour trouver vos WC
-- ✅ **Reconnexion automatique** en cas de déconnexion
-- ✅ **12 switches** prêts à l'emploi
-- ✅ **3 boutons** pour actions momentanées
-- ✅ **Dashboard-ready** avec icônes
-- ✅ **Support multi- WC** (ajouter plusieurs appareils)
+- **Configuration via UI** (pas de YAML)
+- **Scan BLE** intégré pour trouver vos WC
+- **Reconnexion automatique** en cas de déconnexion
+- **2 protocoles** : DM (DM Smart Toilet) et SKS
+- **Lumière ambiante** avec RGB, luminosité et 7 modes d'effets
+- **Réglages avancés** : torques, volume, radar, timers, etc.
+- **Support multi-WC**
 
-## 🚀 Installation Rapide
+## Modèles supportés
 
-### 1. Copier les fichiers
-```bash
-# Copier le dossier custom_components/smart_toilet/
-# vers /config/custom_components/smart_toilet/ dans HA
-```
+| Modèle | Protocole | App d'origine |
+|--------|-----------|---------------|
+| DM Smart Toilet | DM (`0xAA`, 8 octets fixes) | DM-Toilet-Control |
+| SKS Smart Toilet | SKS (`0x33`, taille variable) | com.sks.toilet |
 
-### 2. Redémarrer HA
-- Settings → System → Restart
+## Installation
 
-### 3. Vider le cache
-- Ctrl+Shift+R dans le navigateur
+1. HACS > Integrations > "..." > Custom repositories
+2. Ajouter `https://github.com/rafal83/ha-smart-toilet-ble` (catégorie: Integration)
+3. Installer "Smart Toilet BLE"
+4. Redémarrer HA
+5. Settings > Devices & Services > Add Integration > "Smart Toilet BLE"
+6. Choisir le modèle et entrer/scanner l'adresse MAC
 
-### 4. Ajouter via UI
-- Settings → Devices & Services → Add Integration
-- Chercher "Smart Toilet BLE"
-- Entrer l'adresse MAC ou scanner
+## Entités créées
 
-## 📖 Documentation Complète
+### DM Smart Toilet (DM)
+- 1 light (RGB + brightness + modes)
+- 1 select (mode éclairage)
+- 16 switches
+- 3 buttons
+- 13 numbers (sliders)
+- 1 sensor (connexion)
 
-Voir [INSTALLATION_GUIDE.md](./INSTALLATION_GUIDE.md) pour les instructions détaillées.
+### SKS Smart Toilet
+- 23 switches
+- 6 buttons
+- 12 numbers (sliders)
+- 1 sensor (connexion)
 
-## 📁 Structure
+## Prérequis
 
-```
-custom_components/smart_toilet/
-├── __init__.py           # Core & coordinator
-├── config_flow.py        # UI configuration flow
-├── const.py              # Constants
-├── entity.py             # Base entity class
-├── switch.py             # Switch entities (12)
-├── button.py             # Button entities (3)
-├── manifest.json         # Integration metadata
-├── strings.json          # Translations (FR/EN)
-├── services.yaml         # Custom services
-├── hacs.json            # HACS metadata
-└── README.md            # This file
-```
-
-## 🎮 Entités Créées
-
-### Switches
-- `switch.toilet_light` - Lumière
-- `switch.toilet_power` - Alimentation
-- `switch.toilet_eco` - Mode ECO
-- `switch.toilet_foam` - Mousse
-- `switch.toilet_auto` - Auto
-- `switch.toilet_women_wash` - Lavage féminin
-- `switch.toilet_butt_wash` - Lavage fessier
-- `switch.toilet_child_wash` - Lavage enfant
-- `switch.toilet_massage` - Massage
-- `switch.toilet_dry` - Séchage
-- `switch.toilet_cover` - Couvercle
-- `switch.toilet_ring` - Abattement
-
-### Buttons
-- `button.toilet_flush` - Chasser d'eau
-- `button.toilet_stop` - Arrêt urgence
-- `button.toilet_self_clean` - Auto-nettoyage
-
-## 🔧 Prérequis
-
-- Home Assistant 2023.8.0+
+- Home Assistant 2024.8.0+
 - Adaptateur BLE (intégré ou dongle USB)
 - Adresse MAC de vos WC
 
-## 🐛 Support
+## Support
 
-- **Issues**: [GitHub Issues](https://github.com/votre-username/smart-toilet-ble/issues)
-- **Logs**: HA → Settings → System → Logs → Chercher "smart_toilet"
+- **Issues**: [GitHub Issues](https://github.com/rafal83/ha-smart-toilet-ble/issues)
+- **Logs**: Settings > System > Logs > chercher "smart_toilet_ble"
 
-## 📄 License
+## License
 
 MIT License
