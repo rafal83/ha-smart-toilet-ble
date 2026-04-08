@@ -18,7 +18,6 @@ from .const import (
     DOMAIN,
     RECONNECT_INTERVAL,
     WRITE_CHAR_UUID,
-    TOILET_COMMANDS,
     TEMP_FUNCTIONS,
     PRESSURE_FUNCTION,
     get_model,
