@@ -3,5 +3,5 @@
   "render_readme": true,
   "homeassistant": "2024.8.0",
   "zip_release": true,
-  "filename": "smart_toilet.zip"
+  "filename": "smart-toilet-ble.zip"
 }
