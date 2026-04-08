@@ -14,18 +14,22 @@ from homeassistant.components.bluetooth import async_ble_device_from_address
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
-    CMD_TYPE_LIGHT,
-    CONNECT_TIMEOUT,
+    DM_TYPE_LIGHT,
+    DM_TYPE_TOILET,
     DOMAIN,
     LIGHT_FUNCTION_BRIGHTNESS,
     LIGHT_FUNCTION_MODE,
     LIGHT_FUNCTION_ONOFF,
     LIGHT_FUNCTION_RGB,
     LIGHT_MODES,
+    PROTOCOL_DM,
+    PROTOCOL_SKS,
     RECONNECT_INTERVAL,
     WRITE_CHAR_UUID,
     TEMP_FUNCTIONS,
     PRESSURE_FUNCTION,
+    build_dm_command,
+    build_sks_command,
     get_model,
     get_model_commands,
 )
@@ -34,18 +38,6 @@ _LOGGER = logging.getLogger(__name__)
 
 # Platforms to set up
 PLATFORMS = ["light", "select", "switch", "button", "sensor", "number"]
-
-
-def calculate_checksum(command_bytes: list[int]) -> int:
-    """Calculate checksum: sum of bytes 0-6 modulo 256."""
-    return sum(command_bytes) & 0xFF
-
-
-def create_command(cmd_type: int, function: int, param1: int = 0, param2: int = 0, param3: int = 0) -> bytes:
-    """Create an 8-byte BLE command."""
-    cmd = [0xAA, 0x08, cmd_type, function, param1, param2, param3]
-    cmd.append(calculate_checksum(cmd))
-    return bytes(cmd)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -64,7 +56,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def async_handle_send_command(call) -> None:
         """Handle send BLE command service."""
         command_name = call.data.get("command", "")
-        
+
         # Get model-specific commands
         commands = coordinator.commands
         if command := commands.get(command_name):
@@ -76,7 +68,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Handle set temperature service."""
         temp_type = call.data.get("type", "")
         level = int(call.data.get("level", 0))
-        
+
         if function := TEMP_FUNCTIONS.get(temp_type):
             await coordinator.send_toilet_command(function, level)
         else:
@@ -115,7 +107,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "stop_all": async_handle_stop_all,
         "set_light_color": async_handle_set_light_color,
     }
-    
+
     for service_name, handler in services.items():
         hass.services.async_register(DOMAIN, service_name, handler)
 
@@ -132,7 +124,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Unregister all services
         for service_name in ["send_command", "set_temperature", "set_pressure", "flush", "stop_all", "set_light_color"]:
             hass.services.async_remove(DOMAIN, service_name)
-        
+
         coordinator = hass.data[DOMAIN].pop(entry.entry_id)
         await coordinator.async_disconnect()
 
@@ -152,40 +144,32 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
         self._entry = entry
         self._mac_address = entry.data["mac_address"]
         self._device_name = entry.data.get("name", "Smart Toilet")
-        
+
         # Model-specific configuration
         self._model_id = entry.data.get("model", "generic_japanese")
         self._model = get_model(self._model_id)
         self._commands = get_model_commands(self._model_id)
-        
+        self._protocol = self._model.protocol
+
         self._ble_device: BLEDevice | None = None
         self._client: BleakClient | None = None
         self._is_connected = False
         self._reconnect_task = None
         self._connection_lock = asyncio.Lock()
-        
-        # Track last set values for sensors
-        self._last_values: dict[str, int] = {
-            "seat_temp": 0,
-            "water_temp": 0,
-            "wind_temp": 0,
-            "pressure": 0,
-            "position": 0,
-            "lid_open_torque": 0,
-            "lid_close_torque": 0,
-            "ring_open_torque": 0,
-            "ring_close_torque": 0,
-            "volume": 0,
-            "flush_time": 0,
-            "radar_sensitivity": 0,
-            "auto_close_time": 0,
-        }
 
-        # Track light state
+        # Track last set values for sensors/numbers
+        self._last_values: dict[str, int] = {}
+
+        # Track light state (DM protocol)
         self._light_on: bool = False
         self._light_rgb: tuple[int, int, int] = (255, 255, 255)
         self._light_brightness: int = 255  # HA uses 0-255
         self._light_mode: str = "static"
+
+    @property
+    def protocol(self) -> str:
+        """Return the protocol type."""
+        return self._protocol
 
     @property
     def model_id(self) -> str:
@@ -207,32 +191,29 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
         async with self._connection_lock:
             if self._is_connected:
                 return
-            
+
             # Get BLE device from HA's bluetooth integration
             self._ble_device = async_ble_device_from_address(
                 self.hass, self._mac_address
             )
-            
+
             if self._ble_device is None:
                 _LOGGER.debug(
-                    "BLE device %s not discovered yet, will retry in %ds", 
+                    "BLE device %s not discovered yet, will retry in %ds",
                     self._mac_address,
                     RECONNECT_INTERVAL
                 )
                 self._schedule_reconnect()
                 return
-            
+
             _LOGGER.debug(
-                "Connecting to %s (model: %s) via bleak-retry-connector", 
+                "Connecting to %s (model: %s, protocol: %s) via bleak-retry-connector",
                 self._mac_address,
-                self._model_id
+                self._model_id,
+                self._protocol,
             )
-            
+
             try:
-                # Use model-specific UUIDs if defined
-                service_uuid = self._model.service_uuid if hasattr(self._model, 'service_uuid') else "0000ffe0-0000-1000-8000-00805f9b34fb"
-                write_char_uuid = self._model.write_char_uuid if hasattr(self._model, 'write_char_uuid') else "0000ffe1-0000-1000-8000-00805f9b34fb"
-                
                 # Use bleak-retry-connector for reliable connection
                 self._client = await establish_connection(
                     BleakClient,
@@ -240,19 +221,20 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
                     self._mac_address,
                     max_attempts=3,
                 )
-                
+
                 self._is_connected = True
                 _LOGGER.info(
-                    "✓ Connected to %s at %s (model: %s)", 
+                    "Connected to %s at %s (model: %s, protocol: %s)",
                     self._model.name,
                     self._mac_address,
-                    self._model_id
+                    self._model_id,
+                    self._protocol,
                 )
                 self.async_set_updated_data({})
-                
+
             except Exception as err:
                 _LOGGER.warning(
-                    "Failed to connect to toilet (will retry in %ds): %s", 
+                    "Failed to connect to toilet (will retry in %ds): %s",
                     RECONNECT_INTERVAL,
                     err
                 )
@@ -272,7 +254,7 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
                 await asyncio.sleep(RECONNECT_INTERVAL)
                 await self.async_connect()
                 if self._is_connected:
-                    _LOGGER.info("✓ Reconnected to Smart Toilet")
+                    _LOGGER.info("Reconnected to Smart Toilet")
                     return
             except Exception as err:
                 _LOGGER.debug("Reconnect attempt failed: %s", err)
@@ -282,32 +264,32 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
         if self._reconnect_task:
             self._reconnect_task.cancel()
             self._reconnect_task = None
-            
+
         if self._client:
             try:
                 await self._client.disconnect()
                 _LOGGER.info("Disconnected from Smart Toilet")
             except Exception:
                 pass
-        
+
         self._is_connected = False
         self._ble_device = None
         self._client = None
 
-    async def send_command(self, command: bytes) -> bool:
-        """Send a BLE command to the toilet."""
+    async def send_raw_command(self, command: bytes) -> bool:
+        """Send a raw BLE command to the toilet."""
         if not self._is_connected or not self._client:
             _LOGGER.debug("Not connected, attempting to connect")
             await self.async_connect()
-            
+
             if not self._is_connected:
                 _LOGGER.warning("Still not connected after connect attempt")
                 return False
-        
+
         if not self._client:
             _LOGGER.error("Client not available")
             return False
-        
+
         try:
             # Find writable characteristic
             write_char_uuid_found = None
@@ -322,21 +304,21 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
                         break
                 if write_char_uuid_found:
                     break
-            
+
             if not write_char_uuid_found:
                 _LOGGER.error("No writable characteristic found")
                 return False
-            
+
             # Send command
             await self._client.write_gatt_char(
                 write_char_uuid_found,
                 command,
                 response=False
             )
-            
+
             _LOGGER.debug("Command sent: %s", command.hex())
             return True
-            
+
         except Exception as err:
             _LOGGER.error("Failed to send command: %s", err)
             self._is_connected = False
@@ -344,35 +326,59 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
             return False
 
     async def send_toilet_command(self, function: int, param1: int = 0, param2: int = 0, param3: int = 0) -> bool:
-        """Send a toilet command (type 0x02)."""
-        # Track temperature/pressure/position levels
-        function_to_key = {
-            0x40: "seat_temp",
-            0x41: "water_temp",
-            0x42: "wind_temp",
-            0x43: "pressure",
-            0x44: "position",
-            0x50: "lid_open_torque",
-            0x51: "lid_close_torque",
-            0x52: "ring_open_torque",
-            0x53: "ring_close_torque",
-            0x54: "volume",
-            0x55: "flush_time",
-            0x56: "radar_sensitivity",
-            0x57: "auto_close_time",
-        }
+        """Send a toilet command using the appropriate protocol."""
+        if self._protocol == PROTOCOL_SKS:
+            # SKS: function is the byte1 category, param1 is the code/value
+            command = build_sks_command(function, [param1, param2])
+        else:
+            # DM: fixed 8-byte format
+            command = build_dm_command(DM_TYPE_TOILET, function, param1, param2, param3)
 
-        if function in function_to_key:
-            self._last_values[function_to_key[function]] = param1
+        # Track numeric values
+        if function in self._get_function_to_key_map():
+            self._last_values[self._get_function_to_key_map()[function]] = param1
             self.async_set_updated_data({})
 
-        command = create_command(0x02, function, param1, param2, param3)
-        return await self.send_command(command)
+        return await self.send_raw_command(command)
+
+    def _get_function_to_key_map(self) -> dict[int, str]:
+        """Get the function code to value key mapping for the current protocol."""
+        if self._protocol == PROTOCOL_DM:
+            return {
+                0x40: "seat_temp",
+                0x41: "water_temp",
+                0x42: "wind_temp",
+                0x43: "pressure",
+                0x44: "position",
+                0x50: "lid_open_torque",
+                0x51: "lid_close_torque",
+                0x52: "ring_open_torque",
+                0x53: "ring_close_torque",
+                0x54: "volume",
+                0x55: "flush_time",
+                0x56: "radar_sensitivity",
+                0x57: "auto_close_time",
+            }
+        # SKS uses plus_codes as function identifiers for sliders
+        return {
+            7: "position",
+            13: "pressure",
+            19: "water_temp",
+            22: "seat_temp",
+            23: "wind_temp",
+            57: "wind_speed",
+            28: "radar_level",
+            29: "flush_level",
+            30: "cover_force",
+            31: "ring_force",
+            32: "post_leave_flush_time",
+            33: "auto_close_delay",
+        }
 
     async def send_light_command(self, function: int, param1: int = 0, param2: int = 0, param3: int = 0) -> bool:
-        """Send a light command (type 0x03)."""
-        command = create_command(CMD_TYPE_LIGHT, function, param1, param2, param3)
-        return await self.send_command(command)
+        """Send a light command (DM protocol only, type 0x03)."""
+        command = build_dm_command(DM_TYPE_LIGHT, function, param1, param2, param3)
+        return await self.send_raw_command(command)
 
     async def turn_light_on(
         self,

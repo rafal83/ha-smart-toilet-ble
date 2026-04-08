@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import SmartToiletCoordinator
-from .const import DOMAIN, ICONS, BUTTON_DEFINITIONS
+from .const import DOMAIN, ICONS, get_model_button_definitions
 from .entity import SmartToiletEntity
 
 
@@ -21,9 +21,10 @@ async def async_setup_entry(
     
     # Filter buttons based on model features
     model_features = coordinator.model.features
+    button_defs = get_model_button_definitions(coordinator.model_id)
     buttons = [
         SmartToiletButton(coordinator, entry.entry_id, btn_id, name, cmd_key)
-        for btn_id, name, cmd_key in BUTTON_DEFINITIONS
+        for btn_id, name, cmd_key in button_defs
         if cmd_key in coordinator.commands  # Only add if command exists for model
     ]
     

@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import SmartToiletCoordinator
-from .const import DOMAIN, ICONS, SWITCH_DEFINITIONS
+from .const import DOMAIN, ICONS, get_model_switch_definitions
 from .entity import SmartToiletEntity
 
 
@@ -21,12 +21,12 @@ async def async_setup_entry(
     """Set up Smart Toilet BLE switches."""
     coordinator: SmartToiletCoordinator = hass.data[DOMAIN][entry.entry_id]
     
-    # Filter switches based on model features
-    model_features = coordinator.model.features
+    # Use model-specific switch definitions
+    switch_defs = get_model_switch_definitions(coordinator.model_id)
     switches = [
         SmartToiletSwitch(coordinator, entry.entry_id, switch_def)
-        for switch_def in SWITCH_DEFINITIONS
-        if switch_def.id in model_features or switch_def.has_state is False  # Include momentary switches
+        for switch_def in switch_defs
+        if switch_def.on_command in coordinator.commands  # Only add if command exists
     ]
     
     async_add_entities(switches)

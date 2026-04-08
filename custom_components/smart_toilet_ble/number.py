@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import SmartToiletCoordinator
-from .const import DOMAIN, ICONS, NUMBER_DEFINITIONS
+from .const import DOMAIN, ICONS, get_model_number_definitions
 from .entity import SmartToiletEntity
 
 
@@ -19,9 +19,10 @@ async def async_setup_entry(
     """Set up Smart Toilet BLE number entities."""
     coordinator: SmartToiletCoordinator = hass.data[DOMAIN][entry.entry_id]
     
+    number_defs = get_model_number_definitions(coordinator.model_id)
     numbers = [
         SmartToiletNumber(coordinator, entry.entry_id, *num_def)
-        for num_def in NUMBER_DEFINITIONS
+        for num_def in number_defs
     ]
     
     async_add_entities(numbers)
