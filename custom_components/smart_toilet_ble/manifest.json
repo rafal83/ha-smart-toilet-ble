@@ -1,12 +1,7 @@
 {
   "domain": "smart_toilet_ble",
   "name": "Smart Toilet BLE",
-  "bluetooth": [
-    {
-      "connectable": true,
-      "manufacturer_id": true
-    }
-  ],
+  "bluetooth": [],
   "codeowners": ["@rafal83"],
   "config_flow": true,
   "dependencies": ["bluetooth_adapters", "bluetooth"],
@@ -15,5 +10,5 @@
   "issue_tracker": "https://github.com/rafal83/ha-smart-toilet-ble/issues",
   "loggers": ["bleak", "bleak_retry_connector"],
   "requirements": ["bleak>=0.20.0"],
-  "version": "1.1.0"
+  "version": "1.2.0"
 }

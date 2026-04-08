@@ -4,7 +4,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
-from homeassistant.components.sensor import SensorStateClass
 
 DOMAIN = "smart_toilet_ble"
 MANUFACTURER = "Smart Toilet"
