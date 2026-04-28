@@ -1,0 +1,159 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Smart Toilet BLE - Choix du modèle",
+        "description": "Sélectionnez le modèle de votre WC. Cela détermine le protocole BLE et les commandes utilisées.\n\n{model_count} modèles supportés détectés.",
+        "data": {
+          "model": "Modèle de WC"
+        }
+      },
+      "device": {
+        "title": "Sélection de l'appareil",
+        "description": "{device_count} appareil(s) BLE détecté(s). Sélectionnez votre WC ou saisissez l'adresse MAC manuellement.",
+        "data": {
+          "device_selection": "Sélectionner l'appareil"
+        }
+      },
+      "manual": {
+        "title": "Saisie manuelle de l'adresse MAC",
+        "description": "Saisissez l'adresse MAC de votre WC.\n\nVous pouvez la trouver via :\n1. L'application nRF Connect (scan BLE)\n2. L'application de contrôle d'origine\n3. bluetoothctl sur Home Assistant",
+        "data": {
+          "name": "Nom",
+          "mac_address": "Adresse MAC (ex : AA:BB:CC:DD:EE:FF)"
+        }
+      }
+    },
+    "error": {
+      "invalid_mac": "Format d'adresse MAC invalide. Utilisez : AA:BB:CC:DD:EE:FF",
+      "already_configured": "Ce WC est déjà configuré.",
+      "unknown": "Erreur inattendue."
+    },
+    "abort": {
+      "already_configured": "Ce WC est déjà configuré."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options du Smart Toilet",
+        "data": {
+          "name": "Nom de l'appareil",
+          "model": "Modèle de WC (changement = redémarrage requis)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "button": {
+      "power": {"name": "Alimentation"},
+      "light": {"name": "Éclairage WC"},
+      "eco": {"name": "Mode éco"},
+      "foam": {"name": "Bouclier de mousse"},
+      "auto_mode": {"name": "Mode automatique"},
+      "stop": {"name": "Tout arrêter"},
+      "self_clean": {"name": "Auto-nettoyage"},
+      "flush": {"name": "Chasse d'eau"},
+      "small_flush": {"name": "Petite chasse"},
+      "blow_dry": {"name": "Séchage"},
+      "women_wash": {"name": "Lavage féminin"},
+      "butt_wash": {"name": "Lavage postérieur"},
+      "child_wash": {"name": "Lavage enfant"},
+      "assisted_wash": {"name": "Lavage assisté"},
+      "one_click_clean": {"name": "Nettoyage en un clic"},
+      "moving_wash": {"name": "Lavage mobile"},
+      "massage": {"name": "Massage"},
+      "water_pattern": {"name": "Type de jet"},
+      "cover": {"name": "Couvercle"},
+      "ring": {"name": "Lunette"},
+      "night_light": {"name": "Veilleuse"},
+      "ambient_light": {"name": "Lumière d'ambiance"},
+      "aromatherapy": {"name": "Aromathérapie"},
+      "sterilization": {"name": "Stérilisation"},
+      "infrared_therapy": {"name": "Thérapie infrarouge"},
+      "user_1": {"name": "Préréglage 1"},
+      "user_2": {"name": "Préréglage 2"},
+      "lid_open_force_plus": {"name": "Force ouverture couvercle +"},
+      "lid_open_force_minus": {"name": "Force ouverture couvercle -"},
+      "lid_close_force_plus": {"name": "Force fermeture couvercle +"},
+      "lid_close_force_minus": {"name": "Force fermeture couvercle -"},
+      "ring_open_force_plus": {"name": "Force ouverture lunette +"},
+      "ring_open_force_minus": {"name": "Force ouverture lunette -"},
+      "ring_close_force_plus": {"name": "Force fermeture lunette +"},
+      "ring_close_force_minus": {"name": "Force fermeture lunette -"},
+      "volume_plus": {"name": "Volume +"},
+      "volume_minus": {"name": "Volume -"},
+      "flush_time_plus": {"name": "Durée de chasse +"},
+      "flush_time_minus": {"name": "Durée de chasse -"},
+      "radar_plus": {"name": "Sensibilité radar +"},
+      "radar_minus": {"name": "Sensibilité radar -"},
+      "auto_close_plus": {"name": "Délai fermeture auto +"},
+      "auto_close_minus": {"name": "Délai fermeture auto -"}
+    },
+    "switch": {
+      "auto_flush": {"name": "Chasse automatique"},
+      "auto_foam": {"name": "Mousse automatique"},
+      "aging_mode": {"name": "Mode senior"},
+      "virtual_seat": {"name": "Siège virtuel"},
+      "user_1": {"name": "Préréglage 1"},
+      "user_2": {"name": "Préréglage 2"},
+      "foam": {"name": "Bouclier de mousse"},
+      "dry": {"name": "Séchage"},
+      "cover": {"name": "Couvercle"},
+      "ring": {"name": "Lunette"},
+      "auto_aroma": {"name": "Aroma automatique"},
+      "timed_aroma": {"name": "Aroma programmée"},
+      "auto_ambient_light": {"name": "Lumière d'ambiance auto"},
+      "auto_deodorizer": {"name": "Désodorisant automatique"},
+      "flush_on_leave": {"name": "Chasse au départ"},
+      "all_season_heat": {"name": "Chauffage toutes saisons"},
+      "moisturize": {"name": "Hydratation"},
+      "radar": {"name": "Radar"},
+      "foot_sensor": {"name": "Capteur de pied"},
+      "foot_sensor_cover": {"name": "Capteur de pied couvercle/lunette"},
+      "energy_saving": {"name": "Économie d'énergie"},
+      "commercial_mode": {"name": "Mode commercial"},
+      "buzzer": {"name": "Buzzer"},
+      "display": {"name": "Écran"},
+      "lid_flush": {"name": "Fermer couvercle puis chasse"},
+      "lid_first_flush": {"name": "Couvercle d'abord puis chasse"},
+      "auto_ceramic_sterilize": {"name": "Stérilisation céramique auto"},
+      "auto_nozzle_sterilize": {"name": "Stérilisation buse auto"},
+      "auto_water_sterilize": {"name": "Stérilisation eau auto"}
+    },
+    "number": {
+      "seat_temp": {"name": "Température du siège"},
+      "water_temp": {"name": "Température de l'eau"},
+      "wind_temp": {"name": "Température du séchage"},
+      "pressure": {"name": "Pression de l'eau"},
+      "position": {"name": "Position de la buse"},
+      "wind_speed": {"name": "Vitesse du séchage"},
+      "radar_level": {"name": "Niveau du radar"},
+      "flush_level": {"name": "Niveau de chasse"},
+      "cover_force": {"name": "Force du couvercle"},
+      "ring_force": {"name": "Force de la lunette"},
+      "post_leave_flush_time": {"name": "Délai de chasse après départ"},
+      "auto_close_delay": {"name": "Délai de fermeture automatique"}
+    },
+    "sensor": {
+      "connection": {"name": "État de connexion"}
+    },
+    "select": {
+      "light_mode": {
+        "name": "Mode lumière",
+        "state": {
+          "static": "Statique",
+          "flashing": "Clignotant",
+          "breathing": "Respiration",
+          "running_water": "Eau qui coule",
+          "colorful_running": "Multicolore mouvant",
+          "colorful_gradient": "Dégradé multicolore",
+          "welcome": "Accueil"
+        }
+      }
+    },
+    "light": {
+      "ambient": {"name": "Lumière d'ambiance"}
+    }
+  }
+}

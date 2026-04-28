@@ -43,7 +43,7 @@ class SmartToiletLight(SmartToiletEntity, LightEntity):
         """Initialize the light."""
         super().__init__(coordinator, entry_id)
 
-        self._attr_name = "Light"
+        self._attr_translation_key = "ambient"
         self._attr_unique_id = f"{entry_id}_light"
         self._attr_icon = "mdi:lightbulb"
 

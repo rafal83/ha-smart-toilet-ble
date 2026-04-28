@@ -46,8 +46,8 @@ class SmartToiletSensor(SmartToiletEntity, SensorEntity):
         
         self._sensor_id = sensor_id
         self._key = key
-        
-        self._attr_name = name
+
+        self._attr_translation_key = sensor_id
         self._attr_unique_id = f"{entry_id}_sensor_{sensor_id}"
         self._attr_icon = ICONS.get(sensor_id, "mdi:gauge")
         self._attr_device_class = device_class

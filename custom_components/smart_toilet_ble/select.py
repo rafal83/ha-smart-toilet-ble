@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import SmartToiletCoordinator
-from .const import DOMAIN, ICONS, LIGHT_MODE_LABELS, LIGHT_MODES
+from .const import DOMAIN, ICONS, LIGHT_MODES
 from .entity import SmartToiletEntity
 
 
@@ -37,23 +37,20 @@ class SmartToiletLightModeSelect(SmartToiletEntity, SelectEntity):
         """Initialize the select entity."""
         super().__init__(coordinator, entry_id)
 
-        self._attr_name = "Light Mode"
+        self._attr_translation_key = "light_mode"
         self._attr_unique_id = f"{entry_id}_select_light_mode"
         self._attr_icon = ICONS.get("light_mode", "mdi:lightbulb-multiple")
-        self._attr_options = list(LIGHT_MODE_LABELS.values())
+        # Les options sont les CLÉS — HA les traduit via translations/<lang>.json
+        # entity.select.light_mode.state.<key>
+        self._attr_options = list(LIGHT_MODES.keys())
 
     @property
     def current_option(self) -> str | None:
-        """Return the current selected option."""
-        return LIGHT_MODE_LABELS.get(self.coordinator._light_mode)
+        """Return the current selected option (its key)."""
+        return self.coordinator._light_mode
 
     async def async_select_option(self, option: str) -> None:
-        """Change the selected option."""
-        # Reverse lookup: label -> key
-        mode_key = next(
-            (key for key, label in LIGHT_MODE_LABELS.items() if label == option),
-            None,
-        )
-        if mode_key:
-            await self.coordinator.set_light_mode(mode_key)
+        """Change the selected option (option = mode key)."""
+        if option in LIGHT_MODES:
+            await self.coordinator.set_light_mode(option)
             self.async_write_ha_state()

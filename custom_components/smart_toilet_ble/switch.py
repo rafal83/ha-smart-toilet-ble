@@ -52,7 +52,7 @@ class SmartToiletSwitch(SmartToiletEntity, SwitchEntity):
         self._on_cmd = commands.get(switch_def.on_command)
         self._off_cmd = commands.get(switch_def.off_command) if switch_def.off_command else None
         
-        self._attr_name = switch_def.name
+        self._attr_translation_key = switch_def.id
         self._attr_unique_id = f"{entry_id}_switch_{switch_def.id}"
         self._attr_icon = ICONS.get(switch_def.id, "mdi:power")
         # Le firmware ne renvoie aucun état → toujours optimiste.

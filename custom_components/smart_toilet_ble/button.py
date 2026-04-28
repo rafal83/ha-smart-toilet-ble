@@ -52,7 +52,7 @@ class SmartToiletButton(SmartToiletEntity, ButtonEntity):
         self._button_id = button_id
         self._command = coordinator.commands.get(command_key)
 
-        self._attr_name = name
+        self._attr_translation_key = button_id
         self._attr_unique_id = f"{entry_id}_button_{button_id}"
         self._attr_icon = ICONS.get(button_id, "mdi:gesture-tap")
         if is_config:
