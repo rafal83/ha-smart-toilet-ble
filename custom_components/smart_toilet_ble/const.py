@@ -11,50 +11,59 @@ MANUFACTURER = "Smart Toilet"
 # BLE Configuration
 SERVICE_UUID = "0000ffe0-0000-1000-8000-00805f9b34fb"
 WRITE_CHAR_UUID = "0000ffe1-0000-1000-8000-00805f9b34fb"
+NOTIFY_CHAR_UUID = "0000ffe2-0000-1000-8000-00805f9b34fb"
 
 # Connection settings
 CONNECT_TIMEOUT = 10.0
 COMMAND_TIMEOUT = 5.0
-RECONNECT_INTERVAL = 30  # seconds
+RECONNECT_INTERVAL = 30
 MAX_RECONNECT_ATTEMPTS = 3
 
 # ============================================================================
 # PROTOCOL DEFINITIONS
 # ============================================================================
 
-# --- DM Protocol (DM-Toilet-Control app) ---
-# Fixed 8-byte packets: [0xAA, 0x08, type, function, param1, param2, param3, checksum]
+# DM Protocol (DM-Toilet-Control v1.0.6, reverse-engineered from app source)
+# Trame fixe 8 octets : [0xAA, 0x08, type, function, p1, p2, p3, sum]
+#   type 0x02 = commandes WC
+#   type 0x03 = lumière ambiante
 PROTOCOL_DM = "dm"
 DM_SYNC = 0xAA
 DM_LENGTH = 0x08
 DM_TYPE_TOILET = 0x02
 DM_TYPE_LIGHT = 0x03
 
-# --- SKS Protocol (com.sks.toilet app) ---
-# Variable-length packets: [0x33, function, params_len, ...params, checksum]
+# SKS Protocol (com.sks.toilet)
 PROTOCOL_SKS = "sks"
 SKS_SYNC = 0x33
 SKS_RESPONSE_SYNC = 0x55
-SKS_FUNC_BUTTON = 0x02   # byte1=2: button/action commands
-SKS_FUNC_SETTING = 0x04  # byte1=4: settings commands
-SKS_FUNC_QUERY = 0x33    # byte1=51: query commands
+SKS_FUNC_BUTTON = 0x02
+SKS_FUNC_SETTING = 0x04
+SKS_FUNC_QUERY = 0x33
 SKS_FUNC_JICUN_READ = 0x05
 SKS_FUNC_JICUN_WRITE = 0x06
 
-# Light functions (DM protocol ambient light)
-LIGHT_FUNCTION_ONOFF = 0x01
-LIGHT_FUNCTION_RGB = 0x02
-LIGHT_FUNCTION_MODE = 0x03
-LIGHT_FUNCTION_BRIGHTNESS = 0x04
+# DM ambient light (type 0x03) — l'app envoie une seule trame:
+#   [0xAA, 0x08, 0x03, mode|0x80, R*lightness/100, G*lightness/100, B*lightness/100, sum]
+# Bit 7 (0x80) du mode = light ON. Sans ce bit = light OFF.
+DM_LIGHT_MODE_OFF = 0x00
+DM_LIGHT_MODE_STATIC = 1
+DM_LIGHT_MODE_FLASHING = 2
+DM_LIGHT_MODE_BREATHING = 3
+DM_LIGHT_MODE_RUNNING = 4
+DM_LIGHT_MODE_COLORFUL_RUNNING = 5
+DM_LIGHT_MODE_COLORFUL_GRADIENT = 6
+DM_LIGHT_MODE_WELCOME = 7
+DM_LIGHT_ON_BIT = 0x80
 
 LIGHT_MODES = {
-    "static": 0x00,
-    "flashing": 0x01,
-    "breathing": 0x02,
-    "running_water": 0x03,
-    "colorful_gradient": 0x04,
-    "colorful_running": 0x05,
-    "welcome": 0x06,
+    "static": DM_LIGHT_MODE_STATIC,
+    "flashing": DM_LIGHT_MODE_FLASHING,
+    "breathing": DM_LIGHT_MODE_BREATHING,
+    "running_water": DM_LIGHT_MODE_RUNNING,
+    "colorful_running": DM_LIGHT_MODE_COLORFUL_RUNNING,
+    "colorful_gradient": DM_LIGHT_MODE_COLORFUL_GRADIENT,
+    "welcome": DM_LIGHT_MODE_WELCOME,
 }
 
 LIGHT_MODE_LABELS = {
@@ -62,8 +71,8 @@ LIGHT_MODE_LABELS = {
     "flashing": "Flashing",
     "breathing": "Breathing",
     "running_water": "Running Water",
-    "colorful_gradient": "Colorful Gradient",
     "colorful_running": "Colorful Running",
+    "colorful_gradient": "Colorful Gradient",
     "welcome": "Welcome",
 }
 
@@ -74,38 +83,34 @@ LIGHT_MODE_LABELS = {
 
 @dataclass
 class ToiletCommand:
-    """Represents a BLE toilet command."""
     name: str
     label: str
     function: int
     param: int
-    category: str = "basic"  # basic, wash, cover, cleaning, temp, advanced
+    category: str = "basic"
 
 
 @dataclass
 class SwitchDefinition:
-    """Defines a switch with on/off commands."""
     id: str
     name: str
     on_command: str
     off_command: str
     has_state: bool = True
+    is_config: bool = False
 
 
 @dataclass
 class ToiletModel:
-    """Defines a toilet model with its specific commands and features."""
     id: str
     name: str
     description: str
     commands: dict[str, ToiletCommand]
     features: list[str] = field(default_factory=list)
     manufacturer: str = "Generic"
-    protocol: str = PROTOCOL_DM  # "dm" or "sks"
-    # BLE UUIDs (can be model-specific)
+    protocol: str = PROTOCOL_DM
     service_uuid: str = SERVICE_UUID
     write_char_uuid: str = WRITE_CHAR_UUID
-    # Model-specific entity definitions (override globals if set)
     switch_definitions: list[SwitchDefinition] | None = None
     button_definitions: list[tuple] | None = None
     number_definitions: list[tuple] | None = None
@@ -117,14 +122,12 @@ class ToiletModel:
 # ============================================================================
 
 def build_dm_command(cmd_type: int, function: int, param1: int = 0, param2: int = 0, param3: int = 0) -> bytes:
-    """Build a DM protocol command (fixed 8 bytes)."""
     cmd = [DM_SYNC, DM_LENGTH, cmd_type, function, param1, param2, param3]
     cmd.append(sum(cmd) & 0xFF)
     return bytes(cmd)
 
 
 def build_sks_command(function: int, params: list[int] | None = None) -> bytes:
-    """Build an SKS protocol command (variable length)."""
     if params is None:
         params = []
     cmd = [SKS_SYNC, function, len(params)] + params
@@ -133,69 +136,202 @@ def build_sks_command(function: int, params: list[int] | None = None) -> bytes:
 
 
 # ============================================================================
-# DM PROTOCOL MODEL (DM-Toilet-Control / DM Smart Toilet)
+# DM PROTOCOL — codes function reverse-engineered from DM Toilet Control v1.0.6
 # ============================================================================
+#
+# L'app utilise `createCommond(value, p1, p2, p3)` qui produit la trame
+# [0xAA, 0x08, 0x02, value, p1, p2, p3, sum].
+#
+# - Pour les sliders (water_temp, wind_temp, water_pressure, position, seat_temp):
+#   `value` = le code function du slider, `p1` = level demandé, p2/p3 = 0
+# - Pour tous les autres boutons/toggles :
+#   `value` = le code function de l'action, p1/p2/p3 = état des températures
+#   (envoyé en piggyback ; les passer à 0 est OK pour les actions ponctuelles)
+
+# Codes pour les sliders (bytes 3 + 4 = function + level)
+DM_FUNC_WATER_TEMP = 16        # shuiwen
+DM_FUNC_WIND_TEMP = 32         # fengwen
+DM_FUNC_WATER_PRESSURE = 33    # shuiya
+DM_FUNC_POSITION = 34          # guanwei
+DM_FUNC_SEAT_TEMP = 48         # zuowen
+
+# Codes pour les boutons/actions (byte 3 = code, params = ignorés)
+DM_FUNC_WOMEN_WASH = 1         # fuxi
+DM_FUNC_BUTT_WASH = 2          # tunxi
+DM_FUNC_CHILD_WASH = 3         # tongxi
+DM_FUNC_BLOW_DRY = 4           # chuifeng
+DM_FUNC_COVER = 5              # fangai
+DM_FUNC_RING = 6               # fanquan
+DM_FUNC_FLUSH = 7              # chongshui
+DM_FUNC_AUTO_MODE = 8          # zidong
+DM_FUNC_STOP = 9               # stop
+DM_FUNC_POWER = 14             # power
+DM_FUNC_LIGHT = 15             # light (toilet illumination, distinct from ambient)
+DM_FUNC_SELF_CLEAN = 17        # zijie
+DM_FUNC_FOAM = 18              # paomou
+DM_FUNC_ECO = 19               # jieneng
+DM_FUNC_MASSAGE = 20           # anmo
+
+# Réglages avancés — paires de codes +/- (incrémentent/décrémentent une valeur interne)
+DM_FUNC_LID_OPEN_FORCE_PLUS = 65       # fangai-kai +
+DM_FUNC_LID_OPEN_FORCE_MINUS = 66      # fangai-kai -
+DM_FUNC_LID_CLOSE_FORCE_PLUS = 81      # fangai-guan +
+DM_FUNC_LID_CLOSE_FORCE_MINUS = 82     # fangai-guan -
+DM_FUNC_RING_OPEN_FORCE_PLUS = 97      # fanquan-kai +
+DM_FUNC_RING_OPEN_FORCE_MINUS = 98     # fanquan-kai -
+DM_FUNC_RING_CLOSE_FORCE_PLUS = 113    # fanquan-guan +
+DM_FUNC_RING_CLOSE_FORCE_MINUS = 114   # fanquan-guan -
+DM_FUNC_VOLUME_PLUS = 129              # yinliang +
+DM_FUNC_VOLUME_MINUS = 130             # yinliang -
+DM_FUNC_FLUSH_TIME_PLUS = 145          # chongshui-time +
+DM_FUNC_FLUSH_TIME_MINUS = 146         # chongshui-time -
+DM_FUNC_RADAR_PLUS = 177               # leida +
+DM_FUNC_RADAR_MINUS = 178              # leida -
+DM_FUNC_AUTO_CLOSE_PLUS = 209          # zidong-guangai +
+DM_FUNC_AUTO_CLOSE_MINUS = 210         # zidong-guangai -
+
+# Réglages avancés — toggles ON/OFF (codes distincts pour ON et OFF)
+DM_FUNC_AUTO_FLUSH_ON = 193            # zidong-chongshui ON
+DM_FUNC_AUTO_FLUSH_OFF = 194           # zidong-chongshui OFF
+DM_FUNC_AUTO_FOAM_ON = 225             # zidong-paomo ON
+DM_FUNC_AUTO_FOAM_OFF = 226            # zidong-paomo OFF
+DM_FUNC_AGING_MODE_ON = 241            # laohua ON
+DM_FUNC_AGING_MODE_OFF = 242           # laohua OFF
+DM_FUNC_VIRTUAL_SEAT_ON = 70           # xuni-zhaozuo ON
+DM_FUNC_VIRTUAL_SEAT_OFF = 71          # xuni-zhaozuo OFF
+DM_FUNC_USER_1_ON = 243                # yuliu-1 ON
+DM_FUNC_USER_1_OFF = 244               # yuliu-1 OFF
+DM_FUNC_USER_2_ON = 245                # yuliu-2 ON
+DM_FUNC_USER_2_OFF = 246               # yuliu-2 OFF
+
 
 DM_SMART_TOILET_COMMANDS = {
-    # Basic controls
-    "light_on": ToiletCommand("light_on", "Light On", 0x01, 0x01, "basic"),
-    "light_off": ToiletCommand("light_off", "Light Off", 0x01, 0x00, "basic"),
-    "power_on": ToiletCommand("power_on", "Power On", 0x02, 0x01, "basic"),
-    "power_off": ToiletCommand("power_off", "Power Off", 0x02, 0x00, "basic"),
-    "eco_on": ToiletCommand("eco_on", "ECO Mode On", 0x03, 0x01, "basic"),
-    "eco_off": ToiletCommand("eco_off", "ECO Mode Off", 0x03, 0x00, "basic"),
-    "foam_on": ToiletCommand("foam_on", "Foam Shield On", 0x04, 0x01, "basic"),
-    "foam_off": ToiletCommand("foam_off", "Foam Shield Off", 0x04, 0x00, "basic"),
-    "stop": ToiletCommand("stop", "Stop All", 0x05, 0x00, "basic"),
-    "auto_on": ToiletCommand("auto_on", "Auto Mode On", 0x06, 0x01, "basic"),
-    "auto_off": ToiletCommand("auto_off", "Auto Mode Off", 0x06, 0x00, "basic"),
-    "self_clean": ToiletCommand("self_clean", "Self Clean", 0x07, 0x01, "cleaning"),
+    # Boutons (actions ponctuelles, sans état)
+    "power": ToiletCommand("power", "Power", DM_FUNC_POWER, 0, "basic"),
+    "light": ToiletCommand("light", "Toilet Light", DM_FUNC_LIGHT, 0, "basic"),
+    "eco": ToiletCommand("eco", "Energy Saving", DM_FUNC_ECO, 0, "basic"),
+    "foam": ToiletCommand("foam", "Foam Shield", DM_FUNC_FOAM, 0, "basic"),
+    "auto_mode": ToiletCommand("auto_mode", "Auto Mode", DM_FUNC_AUTO_MODE, 0, "basic"),
+    "stop": ToiletCommand("stop", "Stop All", DM_FUNC_STOP, 0, "basic"),
+    "self_clean": ToiletCommand("self_clean", "Self Clean", DM_FUNC_SELF_CLEAN, 0, "cleaning"),
+    "flush": ToiletCommand("flush", "Flush", DM_FUNC_FLUSH, 0, "cleaning"),
+    "blow_dry": ToiletCommand("blow_dry", "Blow Dry", DM_FUNC_BLOW_DRY, 0, "cleaning"),
+    "women_wash": ToiletCommand("women_wash", "Women's Wash", DM_FUNC_WOMEN_WASH, 0, "wash"),
+    "butt_wash": ToiletCommand("butt_wash", "Butt Wash", DM_FUNC_BUTT_WASH, 0, "wash"),
+    "child_wash": ToiletCommand("child_wash", "Child Wash", DM_FUNC_CHILD_WASH, 0, "wash"),
+    "massage": ToiletCommand("massage", "Massage", DM_FUNC_MASSAGE, 0, "wash"),
+    "cover": ToiletCommand("cover", "Toilet Cover", DM_FUNC_COVER, 0, "cover"),
+    "ring": ToiletCommand("ring", "Toilet Ring", DM_FUNC_RING, 0, "cover"),
 
-    # Washing functions
-    "women_wash": ToiletCommand("women_wash", "Women's Wash", 0x10, 0x01, "wash"),
-    "butt_wash": ToiletCommand("butt_wash", "Butt Wash", 0x11, 0x01, "wash"),
-    "child_wash": ToiletCommand("child_wash", "Child Wash", 0x12, 0x01, "wash"),
-    "massage": ToiletCommand("massage", "Massage", 0x13, 0x01, "wash"),
+    # Réglages +/- (paires de boutons distincts)
+    "lid_open_force_plus": ToiletCommand("lid_open_force_plus", "Lid Open Force +", DM_FUNC_LID_OPEN_FORCE_PLUS, 0, "advanced"),
+    "lid_open_force_minus": ToiletCommand("lid_open_force_minus", "Lid Open Force -", DM_FUNC_LID_OPEN_FORCE_MINUS, 0, "advanced"),
+    "lid_close_force_plus": ToiletCommand("lid_close_force_plus", "Lid Close Force +", DM_FUNC_LID_CLOSE_FORCE_PLUS, 0, "advanced"),
+    "lid_close_force_minus": ToiletCommand("lid_close_force_minus", "Lid Close Force -", DM_FUNC_LID_CLOSE_FORCE_MINUS, 0, "advanced"),
+    "ring_open_force_plus": ToiletCommand("ring_open_force_plus", "Ring Open Force +", DM_FUNC_RING_OPEN_FORCE_PLUS, 0, "advanced"),
+    "ring_open_force_minus": ToiletCommand("ring_open_force_minus", "Ring Open Force -", DM_FUNC_RING_OPEN_FORCE_MINUS, 0, "advanced"),
+    "ring_close_force_plus": ToiletCommand("ring_close_force_plus", "Ring Close Force +", DM_FUNC_RING_CLOSE_FORCE_PLUS, 0, "advanced"),
+    "ring_close_force_minus": ToiletCommand("ring_close_force_minus", "Ring Close Force -", DM_FUNC_RING_CLOSE_FORCE_MINUS, 0, "advanced"),
+    "volume_plus": ToiletCommand("volume_plus", "Volume +", DM_FUNC_VOLUME_PLUS, 0, "advanced"),
+    "volume_minus": ToiletCommand("volume_minus", "Volume -", DM_FUNC_VOLUME_MINUS, 0, "advanced"),
+    "flush_time_plus": ToiletCommand("flush_time_plus", "Flush Time +", DM_FUNC_FLUSH_TIME_PLUS, 0, "advanced"),
+    "flush_time_minus": ToiletCommand("flush_time_minus", "Flush Time -", DM_FUNC_FLUSH_TIME_MINUS, 0, "advanced"),
+    "radar_plus": ToiletCommand("radar_plus", "Radar Sensitivity +", DM_FUNC_RADAR_PLUS, 0, "advanced"),
+    "radar_minus": ToiletCommand("radar_minus", "Radar Sensitivity -", DM_FUNC_RADAR_MINUS, 0, "advanced"),
+    "auto_close_plus": ToiletCommand("auto_close_plus", "Auto Close Delay +", DM_FUNC_AUTO_CLOSE_PLUS, 0, "advanced"),
+    "auto_close_minus": ToiletCommand("auto_close_minus", "Auto Close Delay -", DM_FUNC_AUTO_CLOSE_MINUS, 0, "advanced"),
 
-    # Cover controls
-    "cover_open": ToiletCommand("cover_open", "Cover Open", 0x20, 0x01, "cover"),
-    "cover_close": ToiletCommand("cover_close", "Cover Close", 0x20, 0x00, "cover"),
-    "ring_open": ToiletCommand("ring_open", "Ring Open", 0x21, 0x01, "cover"),
-    "ring_close": ToiletCommand("ring_close", "Ring Close", 0x21, 0x00, "cover"),
-
-    # Cleaning functions
-    "flush": ToiletCommand("flush", "Flush", 0x30, 0x01, "cleaning"),
-    "dry_on": ToiletCommand("dry_on", "Blow Dry On", 0x31, 0x01, "cleaning"),
-    "dry_off": ToiletCommand("dry_off", "Blow Dry Off", 0x31, 0x00, "cleaning"),
-
-    # Advanced settings - On/Off switches
-    "auto_flush_on": ToiletCommand("auto_flush_on", "Auto Flush On", 0x58, 0x01, "advanced"),
-    "auto_flush_off": ToiletCommand("auto_flush_off", "Auto Flush Off", 0x58, 0x00, "advanced"),
-    "auto_foam_on": ToiletCommand("auto_foam_on", "Auto Foam On", 0x59, 0x01, "advanced"),
-    "auto_foam_off": ToiletCommand("auto_foam_off", "Auto Foam Off", 0x59, 0x00, "advanced"),
-    "auto_night_light_on": ToiletCommand("auto_night_light_on", "Auto Night Light On", 0x5A, 0x01, "advanced"),
-    "auto_night_light_off": ToiletCommand("auto_night_light_off", "Auto Night Light Off", 0x5A, 0x00, "advanced"),
-    "aging_mode_on": ToiletCommand("aging_mode_on", "Aging Mode On", 0x5B, 0x01, "advanced"),
-    "aging_mode_off": ToiletCommand("aging_mode_off", "Aging Mode Off", 0x5B, 0x00, "advanced"),
-    "virtual_seat_on": ToiletCommand("virtual_seat_on", "Virtual Seat On", 0x5C, 0x01, "advanced"),
-    "virtual_seat_off": ToiletCommand("virtual_seat_off", "Virtual Seat Off", 0x5C, 0x00, "advanced"),
+    # Toggles ON/OFF (vrais switches, codes distincts)
+    "auto_flush_on": ToiletCommand("auto_flush_on", "Auto Flush On", DM_FUNC_AUTO_FLUSH_ON, 0, "advanced"),
+    "auto_flush_off": ToiletCommand("auto_flush_off", "Auto Flush Off", DM_FUNC_AUTO_FLUSH_OFF, 0, "advanced"),
+    "auto_foam_on": ToiletCommand("auto_foam_on", "Auto Foam On", DM_FUNC_AUTO_FOAM_ON, 0, "advanced"),
+    "auto_foam_off": ToiletCommand("auto_foam_off", "Auto Foam Off", DM_FUNC_AUTO_FOAM_OFF, 0, "advanced"),
+    "aging_mode_on": ToiletCommand("aging_mode_on", "Aging Mode On", DM_FUNC_AGING_MODE_ON, 0, "advanced"),
+    "aging_mode_off": ToiletCommand("aging_mode_off", "Aging Mode Off", DM_FUNC_AGING_MODE_OFF, 0, "advanced"),
+    "virtual_seat_on": ToiletCommand("virtual_seat_on", "Virtual Seat On", DM_FUNC_VIRTUAL_SEAT_ON, 0, "advanced"),
+    "virtual_seat_off": ToiletCommand("virtual_seat_off", "Virtual Seat Off", DM_FUNC_VIRTUAL_SEAT_OFF, 0, "advanced"),
+    "user_1_on": ToiletCommand("user_1_on", "User Preset 1 On", DM_FUNC_USER_1_ON, 0, "advanced"),
+    "user_1_off": ToiletCommand("user_1_off", "User Preset 1 Off", DM_FUNC_USER_1_OFF, 0, "advanced"),
+    "user_2_on": ToiletCommand("user_2_on", "User Preset 2 On", DM_FUNC_USER_2_ON, 0, "advanced"),
+    "user_2_off": ToiletCommand("user_2_off", "User Preset 2 Off", DM_FUNC_USER_2_OFF, 0, "advanced"),
 }
+
+
+# ============================================================================
+# DM-specific entity definitions
+# ============================================================================
+
+# Tous les boutons / actions ponctuelles → ButtonEntity (pas SwitchEntity)
+# car le firmware ne renvoie aucun état, donc un toggle serait toujours faux.
+DM_BUTTON_DEFINITIONS = [
+    # Basic
+    ("power", "Power", "power"),
+    ("light", "Toilet Light", "light"),
+    ("eco", "Energy Saving", "eco"),
+    ("foam", "Foam Shield", "foam"),
+    ("auto_mode", "Auto Mode", "auto_mode"),
+    ("stop", "Stop All", "stop"),
+    # Cleaning
+    ("self_clean", "Self Clean", "self_clean"),
+    ("flush", "Flush", "flush"),
+    ("blow_dry", "Blow Dry", "blow_dry"),
+    # Wash
+    ("women_wash", "Women's Wash", "women_wash"),
+    ("butt_wash", "Butt Wash", "butt_wash"),
+    ("child_wash", "Child Wash", "child_wash"),
+    ("massage", "Massage", "massage"),
+    # Cover
+    ("cover", "Toilet Cover", "cover"),
+    ("ring", "Toilet Ring", "ring"),
+    # Advanced +/-  (4ᵉ élément True = entity_category=config dans HA)
+    ("lid_open_force_plus", "Lid Open Force +", "lid_open_force_plus", True),
+    ("lid_open_force_minus", "Lid Open Force -", "lid_open_force_minus", True),
+    ("lid_close_force_plus", "Lid Close Force +", "lid_close_force_plus", True),
+    ("lid_close_force_minus", "Lid Close Force -", "lid_close_force_minus", True),
+    ("ring_open_force_plus", "Ring Open Force +", "ring_open_force_plus", True),
+    ("ring_open_force_minus", "Ring Open Force -", "ring_open_force_minus", True),
+    ("ring_close_force_plus", "Ring Close Force +", "ring_close_force_plus", True),
+    ("ring_close_force_minus", "Ring Close Force -", "ring_close_force_minus", True),
+    ("volume_plus", "Volume +", "volume_plus", True),
+    ("volume_minus", "Volume -", "volume_minus", True),
+    ("flush_time_plus", "Flush Time +", "flush_time_plus", True),
+    ("flush_time_minus", "Flush Time -", "flush_time_minus", True),
+    ("radar_plus", "Radar Sensitivity +", "radar_plus", True),
+    ("radar_minus", "Radar Sensitivity -", "radar_minus", True),
+    ("auto_close_plus", "Auto Close Delay +", "auto_close_plus", True),
+    ("auto_close_minus", "Auto Close Delay -", "auto_close_minus", True),
+]
+
+# Vrais switches : codes ON et OFF distincts → l'utilisateur garde le contrôle de l'état
+# Tous sont des réglages avancés → is_config=True (rangés dans la section "Configuration" de HA)
+DM_SWITCH_DEFINITIONS = [
+    SwitchDefinition("auto_flush", "Auto Flush", "auto_flush_on", "auto_flush_off", is_config=True),
+    SwitchDefinition("auto_foam", "Auto Foam", "auto_foam_on", "auto_foam_off", is_config=True),
+    SwitchDefinition("aging_mode", "Aging Mode", "aging_mode_on", "aging_mode_off", is_config=True),
+    SwitchDefinition("virtual_seat", "Virtual Seat", "virtual_seat_on", "virtual_seat_off", is_config=True),
+    SwitchDefinition("user_1", "User Preset 1", "user_1_on", "user_1_off", is_config=True),
+    SwitchDefinition("user_2", "User Preset 2", "user_2_on", "user_2_off", is_config=True),
+]
+
+# Sliders DM (function code → level 0-5)
+DM_NUMBER_DEFINITIONS = [
+    ("seat_temp", "Seat Temperature", DM_FUNC_SEAT_TEMP, 0, 5, 1, "level"),
+    ("water_temp", "Water Temperature", DM_FUNC_WATER_TEMP, 0, 5, 1, "level"),
+    ("wind_temp", "Wind Temperature", DM_FUNC_WIND_TEMP, 0, 5, 1, "level"),
+    ("pressure", "Water Pressure", DM_FUNC_WATER_PRESSURE, 0, 5, 1, "level"),
+    ("position", "Nozzle Position", DM_FUNC_POSITION, 0, 5, 1, "level"),
+]
+
 
 # ============================================================================
 # SKS PROTOCOL MODEL (com.sks.toilet v1.1.3)
 # ============================================================================
-# SKS commands use a different scheme:
-#   Buttons:  build_sks_command(0x02, [value, 0])     -> toggles a function
-#   Settings: build_sks_command(0x04, [code, value])   -> sets a setting
 
 SKS_TOILET_COMMANDS = {
-    # Basic controls (byte1=2, toggle buttons)
     "stop": ToiletCommand("stop", "Stop All", SKS_FUNC_BUTTON, 5, "basic"),
     "foam_on": ToiletCommand("foam_on", "Foam Shield On", SKS_FUNC_BUTTON, 28, "basic"),
     "foam_off": ToiletCommand("foam_off", "Foam Shield Off", SKS_FUNC_BUTTON, 28, "basic"),
     "self_clean": ToiletCommand("self_clean", "Self Clean", SKS_FUNC_BUTTON, 17, "cleaning"),
-
-    # Washing functions
     "butt_wash": ToiletCommand("butt_wash", "Butt Wash", SKS_FUNC_BUTTON, 9, "wash"),
     "women_wash": ToiletCommand("women_wash", "Women's Wash", SKS_FUNC_BUTTON, 11, "wash"),
     "child_wash": ToiletCommand("child_wash", "Child Wash", SKS_FUNC_BUTTON, 31, "wash"),
@@ -204,31 +340,21 @@ SKS_TOILET_COMMANDS = {
     "moving_wash": ToiletCommand("moving_wash", "Moving Wash", SKS_FUNC_BUTTON, 32, "wash"),
     "massage": ToiletCommand("massage", "Massage", SKS_FUNC_BUTTON, 20, "wash"),
     "water_pattern": ToiletCommand("water_pattern", "Water Pattern Change", SKS_FUNC_BUTTON, 58, "wash"),
-
-    # Cleaning & drying
     "flush": ToiletCommand("flush", "Full Flush", SKS_FUNC_BUTTON, 2, "cleaning"),
     "small_flush": ToiletCommand("small_flush", "Small Flush", SKS_FUNC_BUTTON, 4, "cleaning"),
     "dry_on": ToiletCommand("dry_on", "Blow Dry On", SKS_FUNC_BUTTON, 15, "cleaning"),
     "dry_off": ToiletCommand("dry_off", "Blow Dry Off", SKS_FUNC_BUTTON, 15, "cleaning"),
-
-    # Cover controls
     "cover_open": ToiletCommand("cover_open", "Cover Open", SKS_FUNC_BUTTON, 35, "cover"),
     "cover_close": ToiletCommand("cover_close", "Cover Close", SKS_FUNC_BUTTON, 35, "cover"),
     "ring_open": ToiletCommand("ring_open", "Ring Open", SKS_FUNC_BUTTON, 36, "cover"),
     "ring_close": ToiletCommand("ring_close", "Ring Close", SKS_FUNC_BUTTON, 36, "cover"),
-
-    # Lights
     "night_light": ToiletCommand("night_light", "Night Light", SKS_FUNC_BUTTON, 34, "basic"),
     "ambient_light": ToiletCommand("ambient_light", "Ambient Light", SKS_FUNC_BUTTON, 33, "basic"),
-
-    # Special functions
     "aromatherapy": ToiletCommand("aromatherapy", "Aromatherapy", SKS_FUNC_BUTTON, 42, "basic"),
     "sterilization": ToiletCommand("sterilization", "Sterilization", SKS_FUNC_BUTTON, 47, "basic"),
     "infrared_therapy": ToiletCommand("infrared_therapy", "Infrared Therapy", SKS_FUNC_BUTTON, 45, "basic"),
     "user_1": ToiletCommand("user_1", "User Preset 1", SKS_FUNC_BUTTON, 48, "basic"),
     "user_2": ToiletCommand("user_2", "User Preset 2", SKS_FUNC_BUTTON, 50, "basic"),
-
-    # Settings switches (byte1=4, code+value)
     "auto_aroma_on": ToiletCommand("auto_aroma_on", "Auto Aroma On", SKS_FUNC_SETTING, 1, "advanced"),
     "auto_aroma_off": ToiletCommand("auto_aroma_off", "Auto Aroma Off", SKS_FUNC_SETTING, 1, "advanced"),
     "timed_aroma_on": ToiletCommand("timed_aroma_on", "Timed Aroma On", SKS_FUNC_SETTING, 2, "advanced"),
@@ -271,27 +397,11 @@ SKS_TOILET_COMMANDS = {
     "auto_water_sterilize_off": ToiletCommand("auto_water_sterilize_off", "Auto Water Sterilize Off", SKS_FUNC_SETTING, 21, "advanced"),
 }
 
-# SKS-specific entity definitions
 SKS_SWITCH_DEFINITIONS = [
-    # Toggle buttons (stateless, same code for on/off)
     SwitchDefinition("foam", "Foam Shield", "foam_on", "foam_off", has_state=False),
-    SwitchDefinition("butt_wash", "Butt Wash", "butt_wash", None, has_state=False),
-    SwitchDefinition("women_wash", "Women's Wash", "women_wash", None, has_state=False),
-    SwitchDefinition("child_wash", "Child Wash", "child_wash", None, has_state=False),
-    SwitchDefinition("assisted_wash", "Assisted Wash", "assisted_wash", None, has_state=False),
-    SwitchDefinition("one_click_clean", "One-Click Clean", "one_click_clean", None, has_state=False),
-    SwitchDefinition("moving_wash", "Moving Wash", "moving_wash", None, has_state=False),
-    SwitchDefinition("massage", "Massage", "massage", None, has_state=False),
-    SwitchDefinition("water_pattern", "Water Pattern", "water_pattern", None, has_state=False),
     SwitchDefinition("dry", "Blow Dry", "dry_on", "dry_off", has_state=False),
     SwitchDefinition("cover", "Toilet Cover", "cover_open", "cover_close", has_state=False),
     SwitchDefinition("ring", "Toilet Ring", "ring_open", "ring_close", has_state=False),
-    SwitchDefinition("night_light", "Night Light", "night_light", None, has_state=False),
-    SwitchDefinition("ambient_light", "Ambient Light", "ambient_light", None, has_state=False),
-    SwitchDefinition("aromatherapy", "Aromatherapy", "aromatherapy", None, has_state=False),
-    SwitchDefinition("sterilization", "Sterilization", "sterilization", None, has_state=False),
-    SwitchDefinition("infrared_therapy", "Infrared Therapy", "infrared_therapy", None, has_state=False),
-    # Settings switches (stateful, on/off pairs via byte1=4)
     SwitchDefinition("auto_aroma", "Auto Aroma", "auto_aroma_on", "auto_aroma_off"),
     SwitchDefinition("timed_aroma", "Timed Aroma", "timed_aroma_on", "timed_aroma_off"),
     SwitchDefinition("auto_ambient_light", "Auto Ambient Light", "auto_ambient_light_on", "auto_ambient_light_off"),
@@ -321,25 +431,36 @@ SKS_BUTTON_DEFINITIONS = [
     ("self_clean", "Self Clean", "self_clean"),
     ("user_1", "User Preset 1", "user_1"),
     ("user_2", "User Preset 2", "user_2"),
+    ("butt_wash", "Butt Wash", "butt_wash"),
+    ("women_wash", "Women's Wash", "women_wash"),
+    ("child_wash", "Child Wash", "child_wash"),
+    ("assisted_wash", "Assisted Wash", "assisted_wash"),
+    ("one_click_clean", "One-Click Clean", "one_click_clean"),
+    ("moving_wash", "Moving Wash", "moving_wash"),
+    ("massage", "Massage", "massage"),
+    ("water_pattern", "Water Pattern", "water_pattern"),
+    ("night_light", "Night Light", "night_light"),
+    ("ambient_light", "Ambient Light", "ambient_light"),
+    ("aromatherapy", "Aromatherapy", "aromatherapy"),
+    ("sterilization", "Sterilization", "sterilization"),
+    ("infrared_therapy", "Infrared Therapy", "infrared_therapy"),
 ]
 
-# SKS slider controls use plus/minus codes via byte1=2
-# For SKS, function stores the plus_code, and we send build_sks_command(0x02, [code, value])
 SKS_NUMBER_DEFINITIONS = [
-    # (id, name, plus_code, min, max, step, unit)
+    # Contrôles (8e élément non-fourni → False)
     ("position", "Nozzle Position", 7, 0, 4, 1, "level"),
     ("pressure", "Water Pressure", 13, 0, 2, 1, "level"),
     ("seat_temp", "Seat Temperature", 22, 0, 2, 1, "level"),
     ("water_temp", "Water Temperature", 19, 0, 2, 1, "level"),
     ("wind_temp", "Wind Temperature", 23, 0, 2, 1, "level"),
     ("wind_speed", "Wind Speed", 57, 0, 4, 1, "level"),
-    # Settings sliders (byte1=4)
-    ("radar_level", "Radar Level", 28, 1, 5, 1, "level"),
-    ("flush_level", "Flush Level", 29, 1, 5, 1, "level"),
-    ("cover_force", "Cover Force", 30, 1, 5, 1, "level"),
-    ("ring_force", "Ring Force", 31, 1, 5, 1, "level"),
-    ("post_leave_flush_time", "Post-Leave Flush Time", 32, 3, 60, 1, "s"),
-    ("auto_close_delay", "Auto Close Delay", 33, 1, 5, 1, "level"),
+    # Réglages (8e élément True = config)
+    ("radar_level", "Radar Level", 28, 1, 5, 1, "level", True),
+    ("flush_level", "Flush Level", 29, 1, 5, 1, "level", True),
+    ("cover_force", "Cover Force", 30, 1, 5, 1, "level", True),
+    ("ring_force", "Ring Force", 31, 1, 5, 1, "level", True),
+    ("post_leave_flush_time", "Post-Leave Flush Time", 32, 3, 60, 1, "s", True),
+    ("auto_close_delay", "Auto Close Delay", 33, 1, 5, 1, "level", True),
 ]
 
 
@@ -353,11 +474,14 @@ TOILET_MODELS: dict[str, ToiletModel] = {
         name="DM Smart Toilet",
         description="DM-Toilet-Control protocol (fixed 8-byte packets, header 0xAA)",
         commands=DM_SMART_TOILET_COMMANDS,
-        features=["light", "rgb", "power", "eco", "foam", "auto", "wash", "cover",
-                  "flush", "dry", "auto_flush", "auto_foam", "auto_night_light",
-                  "aging_mode", "virtual_seat", "advanced_settings", "light_mode"],
+        features=["light", "rgb", "wash", "cover", "flush", "blow_dry",
+                  "auto_flush", "auto_foam", "aging_mode", "virtual_seat",
+                  "user_presets", "advanced_settings", "light_mode"],
         manufacturer="DM",
         protocol=PROTOCOL_DM,
+        switch_definitions=DM_SWITCH_DEFINITIONS,
+        button_definitions=DM_BUTTON_DEFINITIONS,
+        number_definitions=DM_NUMBER_DEFINITIONS,
     ),
     "sks_toilet": ToiletModel(
         id="sks_toilet",
@@ -379,76 +503,46 @@ TOILET_MODELS: dict[str, ToiletModel] = {
     ),
 }
 
-# Default model
 DEFAULT_MODEL = "dm_smart_toilet"
 
 
 # ============================================================================
-# DEFAULT ENTITY DEFINITIONS (used by DM protocol models)
+# SLIDER FUNCTION → KEY MAP (used to remember last-set values)
 # ============================================================================
 
-# Switch definitions - references to command names (resolved per model)
-SWITCH_DEFINITIONS = [
-    SwitchDefinition("power", "Power", "power_on", "power_off"),
-    SwitchDefinition("eco", "ECO Mode", "eco_on", "eco_off"),
-    SwitchDefinition("foam", "Foam Shield", "foam_on", "foam_off"),
-    SwitchDefinition("auto", "Auto Mode", "auto_on", "auto_off"),
-    SwitchDefinition("women_wash", "Women's Wash", "women_wash", None, has_state=False),
-    SwitchDefinition("butt_wash", "Butt Wash", "butt_wash", None, has_state=False),
-    SwitchDefinition("child_wash", "Child Wash", "child_wash", None, has_state=False),
-    SwitchDefinition("massage", "Massage", "massage", None, has_state=False),
-    SwitchDefinition("dry", "Blow Dry", "dry_on", "dry_off"),
-    SwitchDefinition("cover", "Toilet Cover", "cover_open", "cover_close"),
-    SwitchDefinition("ring", "Toilet Ring", "ring_open", "ring_close"),
-    # Advanced settings switches
-    SwitchDefinition("auto_flush", "Auto Flush", "auto_flush_on", "auto_flush_off"),
-    SwitchDefinition("auto_foam", "Auto Foam", "auto_foam_on", "auto_foam_off"),
-    SwitchDefinition("auto_night_light", "Auto Night Light", "auto_night_light_on", "auto_night_light_off"),
-    SwitchDefinition("aging_mode", "Aging Mode", "aging_mode_on", "aging_mode_off"),
-    SwitchDefinition("virtual_seat", "Virtual Seat", "virtual_seat_on", "virtual_seat_off"),
-]
-
-# Button definitions - references to command names
-BUTTON_DEFINITIONS = [
-    ("flush", "Flush", "flush"),
-    ("stop", "Stop All", "stop"),
-    ("self_clean", "Self Clean", "self_clean"),
-]
-
-# Sensor definitions
-SENSOR_DEFINITIONS = [
-    ("connection", "Connection Status", "connection", None, None, None),
-]
-
-# Number (slider) definitions: (id, name, function, min, max, step, unit)
-NUMBER_DEFINITIONS = [
-    ("seat_temp", "Seat Temperature", 0x40, 0, 5, 1, "level"),
-    ("water_temp", "Water Temperature", 0x41, 0, 5, 1, "level"),
-    ("wind_temp", "Wind Temperature", 0x42, 0, 5, 1, "level"),
-    ("pressure", "Water Pressure", 0x43, 0, 5, 1, "level"),
-    ("position", "Nozzle Position", 0x44, 0, 5, 1, "level"),
-    # Advanced settings - range values
-    ("lid_open_torque", "Lid Open Torque", 0x50, 0, 100, 1, "%"),
-    ("lid_close_torque", "Lid Close Torque", 0x51, 0, 100, 1, "%"),
-    ("ring_open_torque", "Ring Open Torque", 0x52, 0, 100, 1, "%"),
-    ("ring_close_torque", "Ring Close Torque", 0x53, 0, 100, 1, "%"),
-    ("volume", "Volume", 0x54, 0, 100, 1, "%"),
-    ("flush_time", "Flush Time", 0x55, 0, 100, 1, "%"),
-    ("radar_sensitivity", "Radar Sensitivity", 0x56, 0, 10, 1, "level"),
-    ("auto_close_time", "Auto Close Time", 0x57, 0, 100, 1, "%"),
-]
-
-# Temperature and pressure control functions (DM protocol)
-TEMP_FUNCTIONS = {
-    "seat": 0x40,
-    "water": 0x41,
-    "wind": 0x42,
+DM_SLIDER_FUNCTION_TO_KEY = {
+    DM_FUNC_SEAT_TEMP: "seat_temp",
+    DM_FUNC_WATER_TEMP: "water_temp",
+    DM_FUNC_WIND_TEMP: "wind_temp",
+    DM_FUNC_WATER_PRESSURE: "pressure",
+    DM_FUNC_POSITION: "position",
 }
 
-PRESSURE_FUNCTION = 0x43
-POSITION_FUNCTION = 0x44
+SKS_SLIDER_FUNCTION_TO_KEY = {
+    7: "position",
+    13: "pressure",
+    19: "water_temp",
+    22: "seat_temp",
+    23: "wind_temp",
+    57: "wind_speed",
+    28: "radar_level",
+    29: "flush_level",
+    30: "cover_force",
+    31: "ring_force",
+    32: "post_leave_flush_time",
+    33: "auto_close_delay",
+}
 
-# Level range
+
+# Temperature/pressure shortcuts (for service calls)
+TEMP_FUNCTIONS = {
+    "seat": DM_FUNC_SEAT_TEMP,
+    "water": DM_FUNC_WATER_TEMP,
+    "wind": DM_FUNC_WIND_TEMP,
+}
+PRESSURE_FUNCTION = DM_FUNC_WATER_PRESSURE
+POSITION_FUNCTION = DM_FUNC_POSITION
+
 MIN_LEVEL = 0
 MAX_LEVEL = 5
 
@@ -458,12 +552,12 @@ ICONS = {
     "power": "mdi:power",
     "eco": "mdi:leaf",
     "foam": "mdi:chart-bubble",
-    "auto": "mdi:autorenew",
+    "auto_mode": "mdi:autorenew",
     "women_wash": "mdi:shower",
     "butt_wash": "mdi:water",
     "child_wash": "mdi:baby-carriage",
     "massage": "mdi:spa",
-    "dry": "mdi:hair-dryer",
+    "blow_dry": "mdi:hair-dryer",
     "cover": "mdi:toilet",
     "ring": "mdi:circle-outline",
     "flush": "mdi:water-pump",
@@ -476,20 +570,28 @@ ICONS = {
     "pressure": "mdi:gauge",
     "position": "mdi:axis-arrow",
     "connection": "mdi:bluetooth-connect",
-    # Advanced settings
     "auto_flush": "mdi:water-sync",
     "auto_foam": "mdi:chart-bubble",
-    "auto_night_light": "mdi:weather-night",
     "aging_mode": "mdi:cog-outline",
     "virtual_seat": "mdi:seat",
-    "lid_open_torque": "mdi:rotate-right",
-    "lid_close_torque": "mdi:rotate-left",
-    "ring_open_torque": "mdi:rotate-right",
-    "ring_close_torque": "mdi:rotate-left",
-    "volume": "mdi:volume-high",
-    "flush_time": "mdi:timer-outline",
-    "radar_sensitivity": "mdi:radar",
-    "auto_close_time": "mdi:timer-lock-outline",
+    "user_1": "mdi:account",
+    "user_2": "mdi:account-outline",
+    "lid_open_force_plus": "mdi:plus",
+    "lid_open_force_minus": "mdi:minus",
+    "lid_close_force_plus": "mdi:plus",
+    "lid_close_force_minus": "mdi:minus",
+    "ring_open_force_plus": "mdi:plus",
+    "ring_open_force_minus": "mdi:minus",
+    "ring_close_force_plus": "mdi:plus",
+    "ring_close_force_minus": "mdi:minus",
+    "volume_plus": "mdi:volume-plus",
+    "volume_minus": "mdi:volume-minus",
+    "flush_time_plus": "mdi:plus",
+    "flush_time_minus": "mdi:minus",
+    "radar_plus": "mdi:plus",
+    "radar_minus": "mdi:minus",
+    "auto_close_plus": "mdi:plus",
+    "auto_close_minus": "mdi:minus",
     "light_mode": "mdi:lightbulb-multiple",
     # SKS-specific
     "night_light": "mdi:weather-night",
@@ -501,8 +603,6 @@ ICONS = {
     "one_click_clean": "mdi:auto-fix",
     "moving_wash": "mdi:swap-horizontal",
     "water_pattern": "mdi:waves",
-    "user_1": "mdi:account",
-    "user_2": "mdi:account-outline",
     "auto_aroma": "mdi:spa-outline",
     "timed_aroma": "mdi:timer-sand",
     "auto_ambient_light": "mdi:lightbulb-auto",
@@ -532,45 +632,47 @@ ICONS = {
 }
 
 
+# Default fallbacks (used if a model doesn't override)
+SWITCH_DEFINITIONS = DM_SWITCH_DEFINITIONS
+BUTTON_DEFINITIONS = DM_BUTTON_DEFINITIONS
+NUMBER_DEFINITIONS = DM_NUMBER_DEFINITIONS
+SENSOR_DEFINITIONS = [
+    ("connection", "Connection Status", "connection", None, None, None),
+]
+
+
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
 
 def get_model(model_id: str | None = None) -> ToiletModel:
-    """Get a toilet model by ID, or default if not found."""
     if model_id and model_id in TOILET_MODELS:
         return TOILET_MODELS[model_id]
     return TOILET_MODELS[DEFAULT_MODEL]
 
 
 def get_model_commands(model_id: str | None = None) -> dict[str, ToiletCommand]:
-    """Get commands for a specific model."""
     return get_model(model_id).commands
 
 
 def get_model_features(model_id: str | None = None) -> list[str]:
-    """Get supported features for a model."""
     return get_model(model_id).features
 
 
 def get_model_switch_definitions(model_id: str | None = None) -> list[SwitchDefinition]:
-    """Get switch definitions for a model (model-specific or default)."""
     model = get_model(model_id)
     return model.switch_definitions if model.switch_definitions is not None else SWITCH_DEFINITIONS
 
 
 def get_model_button_definitions(model_id: str | None = None) -> list[tuple]:
-    """Get button definitions for a model (model-specific or default)."""
     model = get_model(model_id)
     return model.button_definitions if model.button_definitions is not None else BUTTON_DEFINITIONS
 
 
 def get_model_number_definitions(model_id: str | None = None) -> list[tuple]:
-    """Get number definitions for a model (model-specific or default)."""
     model = get_model(model_id)
     return model.number_definitions if model.number_definitions is not None else NUMBER_DEFINITIONS
 
 
 def command_exists(command_name: str, model_id: str | None = None) -> bool:
-    """Check if a command exists for a model."""
     return command_name in get_model_commands(model_id)

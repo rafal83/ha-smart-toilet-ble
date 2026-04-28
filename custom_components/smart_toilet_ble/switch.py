@@ -6,6 +6,7 @@ from typing import Any
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import SmartToiletCoordinator
@@ -54,8 +55,11 @@ class SmartToiletSwitch(SmartToiletEntity, SwitchEntity):
         self._attr_name = switch_def.name
         self._attr_unique_id = f"{entry_id}_switch_{switch_def.id}"
         self._attr_icon = ICONS.get(switch_def.id, "mdi:power")
-        self._attr_assumed_state = not switch_def.has_state
+        # Le firmware ne renvoie aucun état → toujours optimiste.
+        self._attr_assumed_state = True
         self._attr_should_poll = False
+        if getattr(switch_def, "is_config", False):
+            self._attr_entity_category = EntityCategory.CONFIG
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""

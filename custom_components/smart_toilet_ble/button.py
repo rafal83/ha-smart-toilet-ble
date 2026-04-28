@@ -4,6 +4,7 @@ from __future__ import annotations
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import SmartToiletCoordinator
@@ -18,16 +19,18 @@ async def async_setup_entry(
 ) -> None:
     """Set up Smart Toilet BLE buttons."""
     coordinator: SmartToiletCoordinator = hass.data[DOMAIN][entry.entry_id]
-    
-    # Filter buttons based on model features
-    model_features = coordinator.model.features
+
     button_defs = get_model_button_definitions(coordinator.model_id)
-    buttons = [
-        SmartToiletButton(coordinator, entry.entry_id, btn_id, name, cmd_key)
-        for btn_id, name, cmd_key in button_defs
-        if cmd_key in coordinator.commands  # Only add if command exists for model
-    ]
-    
+    buttons = []
+    for btn_def in button_defs:
+        # Tuple (id, name, command_key) ou (id, name, command_key, is_config)
+        btn_id, name, cmd_key = btn_def[0], btn_def[1], btn_def[2]
+        is_config = btn_def[3] if len(btn_def) > 3 else False
+        if cmd_key in coordinator.commands:
+            buttons.append(SmartToiletButton(
+                coordinator, entry.entry_id, btn_id, name, cmd_key, is_config
+            ))
+
     async_add_entities(buttons)
 
 
@@ -41,16 +44,19 @@ class SmartToiletButton(SmartToiletEntity, ButtonEntity):
         button_id: str,
         name: str,
         command_key: str,
+        is_config: bool = False,
     ) -> None:
         """Initialize the button from definition."""
         super().__init__(coordinator, entry_id)
-        
+
         self._button_id = button_id
         self._command = coordinator.commands.get(command_key)
-        
+
         self._attr_name = name
         self._attr_unique_id = f"{entry_id}_button_{button_id}"
         self._attr_icon = ICONS.get(button_id, "mdi:gesture-tap")
+        if is_config:
+            self._attr_entity_category = EntityCategory.CONFIG
 
     async def async_press(self) -> None:
         """Press the button."""

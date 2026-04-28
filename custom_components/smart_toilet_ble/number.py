@@ -4,6 +4,7 @@ from __future__ import annotations
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import SmartToiletCoordinator
@@ -18,13 +19,13 @@ async def async_setup_entry(
 ) -> None:
     """Set up Smart Toilet BLE number entities."""
     coordinator: SmartToiletCoordinator = hass.data[DOMAIN][entry.entry_id]
-    
+
     number_defs = get_model_number_definitions(coordinator.model_id)
     numbers = [
         SmartToiletNumber(coordinator, entry.entry_id, *num_def)
         for num_def in number_defs
     ]
-    
+
     async_add_entities(numbers)
 
 
@@ -42,6 +43,7 @@ class SmartToiletNumber(SmartToiletEntity, NumberEntity):
         max_value: int = 5,
         step: int = 1,
         unit: str = "level",
+        is_config: bool = False,
     ) -> None:
         """Initialize the number entity from definition."""
         super().__init__(coordinator, entry_id)
@@ -57,6 +59,8 @@ class SmartToiletNumber(SmartToiletEntity, NumberEntity):
         self._attr_native_step = step
         self._attr_mode = NumberMode.SLIDER
         self._attr_native_unit_of_measurement = unit
+        if is_config:
+            self._attr_entity_category = EntityCategory.CONFIG
 
     @property
     def native_value(self) -> float:

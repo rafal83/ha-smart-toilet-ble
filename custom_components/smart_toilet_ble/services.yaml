@@ -7,38 +7,33 @@ send_command:
     command:
       name: Command
       description: The command to execute on the toilet.
-      example: "light_on"
+      example: "flush"
       required: true
       selector:
         select:
           mode: dropdown
           options:
-            - label: "💡 Light On"
-              value: "light_on"
-            - label: "💡 Light Off"
-              value: "light_off"
-            - label: "🔌 Power On"
-              value: "power_on"
-            - label: "🔌 Power Off"
-              value: "power_off"
-            - label: "🍃 ECO Mode On"
-              value: "eco_on"
-            - label: "🍃 ECO Mode Off"
-              value: "eco_off"
-            - label: "🫧 Foam Shield On"
-              value: "foam_on"
-            - label: "🫧 Foam Shield Off"
-              value: "foam_off"
-            - label: "🔄 Auto Mode On"
-              value: "auto_on"
-            - label: "🔄 Auto Mode Off"
-              value: "auto_off"
-            - label: "🧹 Self Clean"
-              value: "self_clean"
+            # Basic
+            - label: "🔌 Power"
+              value: "power"
+            - label: "💡 Toilet Light"
+              value: "light"
+            - label: "🍃 Energy Saving"
+              value: "eco"
+            - label: "🫧 Foam Shield"
+              value: "foam"
+            - label: "🔄 Auto Mode"
+              value: "auto_mode"
             - label: "🛑 Stop All"
               value: "stop"
+            # Cleaning
+            - label: "🧹 Self Clean"
+              value: "self_clean"
             - label: "🌊 Flush"
               value: "flush"
+            - label: "💨 Blow Dry"
+              value: "blow_dry"
+            # Wash
             - label: "🚿 Women's Wash"
               value: "women_wash"
             - label: "💧 Butt Wash"
@@ -47,18 +42,12 @@ send_command:
               value: "child_wash"
             - label: "💆 Massage"
               value: "massage"
-            - label: "🚽 Cover Open"
-              value: "cover_open"
-            - label: "🚽 Cover Close"
-              value: "cover_close"
-            - label: "⭕ Ring Open"
-              value: "ring_open"
-            - label: "⭕ Ring Close"
-              value: "ring_close"
-            - label: "💨 Blow Dry On"
-              value: "dry_on"
-            - label: "💨 Blow Dry Off"
-              value: "dry_off"
+            # Cover
+            - label: "🚽 Toilet Cover"
+              value: "cover"
+            - label: "⭕ Toilet Ring"
+              value: "ring"
+            # Toggles ON/OFF
             - label: "🔄 Auto Flush On"
               value: "auto_flush_on"
             - label: "🔄 Auto Flush Off"
@@ -67,10 +56,6 @@ send_command:
               value: "auto_foam_on"
             - label: "🫧 Auto Foam Off"
               value: "auto_foam_off"
-            - label: "🌙 Auto Night Light On"
-              value: "auto_night_light_on"
-            - label: "🌙 Auto Night Light Off"
-              value: "auto_night_light_off"
             - label: "⚙️ Aging Mode On"
               value: "aging_mode_on"
             - label: "⚙️ Aging Mode Off"
@@ -79,6 +64,47 @@ send_command:
               value: "virtual_seat_on"
             - label: "💺 Virtual Seat Off"
               value: "virtual_seat_off"
+            - label: "👤 User 1 On"
+              value: "user_1_on"
+            - label: "👤 User 1 Off"
+              value: "user_1_off"
+            - label: "👤 User 2 On"
+              value: "user_2_on"
+            - label: "👤 User 2 Off"
+              value: "user_2_off"
+            # Adjustments +/-
+            - label: "🔊 Volume +"
+              value: "volume_plus"
+            - label: "🔉 Volume -"
+              value: "volume_minus"
+            - label: "📡 Radar Sensitivity +"
+              value: "radar_plus"
+            - label: "📡 Radar Sensitivity -"
+              value: "radar_minus"
+            - label: "⏱️ Flush Time +"
+              value: "flush_time_plus"
+            - label: "⏱️ Flush Time -"
+              value: "flush_time_minus"
+            - label: "⏲️ Auto Close Delay +"
+              value: "auto_close_plus"
+            - label: "⏲️ Auto Close Delay -"
+              value: "auto_close_minus"
+            - label: "🔼 Lid Open Force +"
+              value: "lid_open_force_plus"
+            - label: "🔽 Lid Open Force -"
+              value: "lid_open_force_minus"
+            - label: "🔼 Lid Close Force +"
+              value: "lid_close_force_plus"
+            - label: "🔽 Lid Close Force -"
+              value: "lid_close_force_minus"
+            - label: "🔼 Ring Open Force +"
+              value: "ring_open_force_plus"
+            - label: "🔽 Ring Open Force -"
+              value: "ring_open_force_minus"
+            - label: "🔼 Ring Close Force +"
+              value: "ring_close_force_plus"
+            - label: "🔽 Ring Close Force -"
+              value: "ring_close_force_minus"
 
 set_temperature:
   name: Set Temperature
@@ -138,8 +164,8 @@ stop_all:
   fields: {}
 
 set_light_color:
-  name: Set Light Color
-  description: Set the RGB color of the toilet light.
+  name: Set Ambient Light Color
+  description: Set the RGB color of the ambient light.
   fields:
     red:
       name: Red
