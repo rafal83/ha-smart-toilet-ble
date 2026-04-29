@@ -1,5 +1,9 @@
 # Smart Toilet BLE - Quick Reference Card
 
+> ⚠️ The DM function codes below were corrected after reverse-engineering the official
+> DM Toilet Control v1.0.6 app. Earlier versions of this card were wrong (used a different code
+> family that some firmwares ignored silently).
+
 ## Supported Protocols
 
 | Protocol | Header | Format | Used by |
@@ -11,91 +15,88 @@
 
 ## DM Protocol
 
-### Command Format
+### Frame Format
 ```
 [0xAA] [0x08] [TYPE] [FUNCTION] [PARAM1] [PARAM2] [PARAM3] [CHECKSUM]
 ```
 - Type `0x02` = Toilet, `0x03` = Ambient light
-- Checksum = sum of bytes 0-6 mod 256
+- Checksum = sum of bytes 0–6 mod 256
 
-### Basic Controls (type=0x02)
-| Action | Function | Param1 | Hex |
-|--------|----------|--------|-----|
-| Light ON | `0x01` | `0x01` | `AA 08 02 01 01 00 00 B6` |
-| Light OFF | `0x01` | `0x00` | `AA 08 02 01 00 00 00 B5` |
-| Power ON | `0x02` | `0x01` | `AA 08 02 02 01 00 00 B7` |
-| Power OFF | `0x02` | `0x00` | `AA 08 02 02 00 00 00 B6` |
-| ECO ON | `0x03` | `0x01` | `AA 08 02 03 01 00 00 B8` |
-| Foam ON | `0x04` | `0x01` | `AA 08 02 04 01 00 00 B9` |
-| STOP | `0x05` | `0x00` | `AA 08 02 05 00 00 00 B9` |
-| Auto ON | `0x06` | `0x01` | `AA 08 02 06 01 00 00 BB` |
-| Self Clean | `0x07` | `0x01` | `AA 08 02 07 01 00 00 BC` |
+### Action Buttons (type=0x02, params=0)
 
-### Washing (type=0x02)
-| Action | Function | Hex |
-|--------|----------|-----|
-| Women's Wash | `0x10` | `AA 08 02 10 01 00 00 C5` |
-| Butt Wash | `0x11` | `AA 08 02 11 01 00 00 C6` |
-| Child Wash | `0x12` | `AA 08 02 12 01 00 00 C7` |
-| Massage | `0x13` | `AA 08 02 13 01 00 00 C8` |
+| Action | Function (dec) | Hex |
+|--------|----|-----|
+| Women's Wash | 1 | `AA 08 02 01 00 00 00 B5` |
+| Butt Wash | 2 | `AA 08 02 02 00 00 00 B6` |
+| Child Wash | 3 | `AA 08 02 03 00 00 00 B7` |
+| Blow Dry | 4 | `AA 08 02 04 00 00 00 B8` |
+| Cover (toggle) | 5 | `AA 08 02 05 00 00 00 B9` |
+| Ring (toggle) | 6 | `AA 08 02 06 00 00 00 BA` |
+| Flush | 7 | `AA 08 02 07 00 00 00 BB` |
+| Auto Mode | 8 | `AA 08 02 08 00 00 00 BC` |
+| Stop All | 9 | `AA 08 02 09 00 00 00 BD` |
+| Power | 14 | `AA 08 02 0E 00 00 00 C2` |
+| Toilet Light | 15 | `AA 08 02 0F 00 00 00 C3` |
+| Self Clean | 17 | `AA 08 02 11 00 00 00 C5` |
+| Foam Shield | 18 | `AA 08 02 12 00 00 00 C6` |
+| Energy Saving | 19 | `AA 08 02 13 00 00 00 C7` |
+| Massage | 20 | `AA 08 02 14 00 00 00 C8` |
 
-### Cover (type=0x02)
-| Action | Function | Param1 | Hex |
-|--------|----------|--------|-----|
-| Cover OPEN | `0x20` | `0x01` | `AA 08 02 20 01 00 00 D5` |
-| Cover CLOSE | `0x20` | `0x00` | `AA 08 02 20 00 00 00 D4` |
-| Ring OPEN | `0x21` | `0x01` | `AA 08 02 21 01 00 00 D6` |
-| Ring CLOSE | `0x21` | `0x00` | `AA 08 02 21 00 00 00 D5` |
+### Sliders (type=0x02, param1=level 0–5)
 
-### Cleaning (type=0x02)
-| Action | Function | Hex |
-|--------|----------|-----|
-| Flush | `0x30` | `AA 08 02 30 01 00 00 E5` |
-| Dry ON | `0x31` | `AA 08 02 31 01 00 00 E6` |
-| Dry OFF | `0x31` | `AA 08 02 31 00 00 00 E5` |
+| Control | Function (dec) | Template |
+|---------|----|----------|
+| Water Temp | 16 | `AA 08 02 10 [LVL] 00 00 [CS]` |
+| Wind Temp | 32 | `AA 08 02 20 [LVL] 00 00 [CS]` |
+| Water Pressure | 33 | `AA 08 02 21 [LVL] 00 00 [CS]` |
+| Nozzle Position | 34 | `AA 08 02 22 [LVL] 00 00 [CS]` |
+| Seat Temp | 48 | `AA 08 02 30 [LVL] 00 00 [CS]` |
 
-### Levels (type=0x02)
-| Control | Function | Range | Template |
-|---------|----------|-------|----------|
-| Seat Temp | `0x40` | 0-5 | `AA 08 02 40 [LVL] 00 00 [CS]` |
-| Water Temp | `0x41` | 0-5 | `AA 08 02 41 [LVL] 00 00 [CS]` |
-| Wind Temp | `0x42` | 0-5 | `AA 08 02 42 [LVL] 00 00 [CS]` |
-| Pressure | `0x43` | 0-5 | `AA 08 02 43 [LVL] 00 00 [CS]` |
-| Position | `0x44` | 0-5 | `AA 08 02 44 [LVL] 00 00 [CS]` |
+### Adjustments +/− (stateless step)
 
-### Advanced Settings (type=0x02)
-| Control | Function | Range |
-|---------|----------|-------|
-| Lid Open Torque | `0x50` | 0-100 |
-| Lid Close Torque | `0x51` | 0-100 |
-| Ring Open Torque | `0x52` | 0-100 |
-| Ring Close Torque | `0x53` | 0-100 |
-| Volume | `0x54` | 0-100 |
-| Flush Time | `0x55` | 0-100 |
-| Radar Sensitivity | `0x56` | 0-10 |
-| Auto Close Time | `0x57` | 0-100 |
-| Auto Flush | `0x58` | 0/1 |
-| Auto Foam | `0x59` | 0/1 |
-| Auto Night Light | `0x5A` | 0/1 |
-| Aging Mode | `0x5B` | 0/1 |
-| Virtual Seat | `0x5C` | 0/1 |
+| Setting | + | − |
+|---------|---|---|
+| Lid Open Force | 65 | 66 |
+| Lid Close Force | 81 | 82 |
+| Ring Open Force | 97 | 98 |
+| Ring Close Force | 113 | 114 |
+| Volume | 129 | 130 |
+| Flush Time | 145 | 146 |
+| Radar Sensitivity | 177 | 178 |
+| Auto Close Delay | 209 | 210 |
 
-### Ambient Light (type=0x03)
-| Action | Function | Params | Template |
-|--------|----------|--------|----------|
-| Light ON | `0x01` | 1 | `AA 08 03 01 01 00 00 B7` |
-| Light OFF | `0x01` | 0 | `AA 08 03 01 00 00 00 B6` |
-| RGB Color | `0x02` | R,G,B | `AA 08 03 02 [R] [G] [B] [CS]` |
-| Mode | `0x03` | 0-6 | `AA 08 03 03 [MODE] 00 00 [CS]` |
-| Brightness | `0x04` | 0-100 | `AA 08 03 04 [VAL] 00 00 [CS]` |
+### Toggles ON/OFF (distinct codes)
 
-**Light Modes:** 0=Static, 1=Flashing, 2=Breathing, 3=Running Water, 4=Colorful Gradient, 5=Colorful Running, 6=Welcome
+| Toggle | ON | OFF |
+|--------|----|-----|
+| Auto Flush | 193 | 194 |
+| Auto Foam | 225 | 226 |
+| Aging Mode | 241 | 242 |
+| Virtual Seat | 70 | 71 |
+| User Preset 1 | 243 | 244 |
+| User Preset 2 | 245 | 246 |
+
+### Ambient Light (type=0x03, single frame)
+
+```
+[AA] [08] [03] [MODE | 0x80(if ON)] [R*pct/100] [G*pct/100] [B*pct/100] [CS]
+```
+
+| Action | Frame |
+|--------|-------|
+| ON, Static, white 100% | `AA 08 03 81 FF FF FF B0` |
+| ON, Static, white 50% | `AA 08 03 81 7F 7F 7F B3` |
+| ON, Breathing, red 100% | `AA 08 03 83 FF 00 00 B5` |
+| OFF | `AA 08 03 00 00 00 00 B5` |
+
+**Light Modes (low 7 bits of byte 3):**
+1=Static · 2=Flashing · 3=Breathing · 4=Running Water · 5=Colorful Running · 6=Colorful Gradient · 7=Welcome · 0=Off
 
 ---
 
 ## SKS Protocol
 
-### Command Format
+### Frame Format
 ```
 [0x33] [FUNCTION] [PARAMS_LEN] [PARAMS...] [CHECKSUM]
 ```
@@ -149,20 +150,26 @@ build_sks_command(0x04, [code, value])
 
 | Setting | Code | Range |
 |---------|------|-------|
-| Radar Level | 28 | 1-5 |
-| Flush Level | 29 | 1-5 |
-| Cover Force | 30 | 1-5 |
-| Ring Force | 31 | 1-5 |
-| Post-Leave Flush | 32 | 3-60s |
-| Auto Close Delay | 33 | 1-5 |
+| Radar Level | 28 | 1–5 |
+| Flush Level | 29 | 1–5 |
+| Cover Force | 30 | 1–5 |
+| Ring Force | 31 | 1–5 |
+| Post-Leave Flush | 32 | 3–60s |
+| Auto Close Delay | 33 | 1–5 |
 
 ---
 
 ## BLE Connection
 
-- **Service UUID**: `0000FFE0-0000-1000-8000-00805F9B34FB`
-- **Write Characteristic**: `0000FFE1-0000-1000-8000-00805F9B34FB`
-- **Read/Notify**: `0000FFE2-0000-1000-8000-00805F9B34FB`
+The DM app uses `0000FFA0`/`0000FFA1`. The original spec mentions `0000FFE0`/`0000FFE1`/`0000FFE2`.
+Devices in the wild may expose either; the integration falls back to the first writable
+characteristic found.
+
+| Role | Spec UUID | DM-app UUID |
+|------|-----------|-------------|
+| Service | `0000FFE0-…` | `0000FFA0-…` |
+| Write | `0000FFE1-…` | `0000FFA1-…` |
+| Notify (DM firmware does NOT push) | `0000FFE2-…` | — |
 
 ## Checksum
 
@@ -173,3 +180,11 @@ checksum = sum(bytes[0:7]) & 0xFF
 # SKS
 checksum = sum(all_preceding_bytes) & 0xFF
 ```
+
+## State feedback
+
+**DM**: none — firmware is write-only. Switches use `assumed_state=True`; sliders show the last
+value sent from HA.
+
+**SKS**: notifications on header `0x55` carry packed nibbles for the main controls; the integration
+parses them in `_parse_sks_frame()`.
