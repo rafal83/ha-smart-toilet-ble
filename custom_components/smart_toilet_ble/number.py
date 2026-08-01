@@ -1,7 +1,7 @@
 """Support for Smart Toilet BLE number entities."""
 from __future__ import annotations
 
-from homeassistant.components.number import NumberEntity, NumberMode
+from homeassistant.components.number import NumberEntity, NumberMode, RestoreNumber
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
@@ -29,7 +29,7 @@ async def async_setup_entry(
     async_add_entities(numbers)
 
 
-class SmartToiletNumber(SmartToiletEntity, NumberEntity):
+class SmartToiletNumber(SmartToiletEntity, RestoreNumber, NumberEntity):
     """Representation of a Smart Toilet BLE number entity."""
 
     def __init__(
@@ -62,6 +62,15 @@ class SmartToiletNumber(SmartToiletEntity, NumberEntity):
         self._attr_assumed_state = True
         if is_config:
             self._attr_entity_category = EntityCategory.CONFIG
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the last commanded value across HA restarts (device has no feedback)."""
+        await super().async_added_to_hass()
+        if self._number_id in self.coordinator._last_values:
+            return
+        last_data = await self.async_get_last_number_data()
+        if last_data is not None and last_data.native_value is not None:
+            self.coordinator._last_values[self._number_id] = int(last_data.native_value)
 
     @property
     def native_value(self) -> float | None:
