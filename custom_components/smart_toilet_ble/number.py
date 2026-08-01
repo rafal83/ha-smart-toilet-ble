@@ -59,15 +59,16 @@ class SmartToiletNumber(SmartToiletEntity, NumberEntity):
         self._attr_native_step = step
         self._attr_mode = NumberMode.SLIDER
         self._attr_native_unit_of_measurement = unit
+        self._attr_assumed_state = True
         if is_config:
             self._attr_entity_category = EntityCategory.CONFIG
 
     @property
-    def native_value(self) -> float:
-        """Return the current value."""
+    def native_value(self) -> float | None:
+        """Return the last commanded value, or None if unknown (device gives no feedback)."""
         if hasattr(self.coordinator, '_last_values') and self._number_id in self.coordinator._last_values:
             return float(self.coordinator._last_values[self._number_id])
-        return 0.0
+        return None
 
     async def async_set_native_value(self, value: float) -> None:
         """Set the value."""

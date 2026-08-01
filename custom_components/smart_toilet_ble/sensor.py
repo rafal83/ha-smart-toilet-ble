@@ -53,6 +53,8 @@ class SmartToiletSensor(SmartToiletEntity, SensorEntity):
         self._attr_device_class = device_class
         self._attr_native_unit_of_measurement = unit
         self._attr_state_class = state_class
+        if self._key != "connection":
+            self._attr_assumed_state = True
 
     @property
     def native_value(self) -> str | int | None:
