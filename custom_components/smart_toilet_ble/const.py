@@ -11,7 +11,14 @@ MANUFACTURER = "Smart Toilet"
 # BLE Configuration
 SERVICE_UUID = "0000ffe0-0000-1000-8000-00805f9b34fb"
 WRITE_CHAR_UUID = "0000ffe1-0000-1000-8000-00805f9b34fb"
+WRITE_CHAR_UUIDS = [
+    "0000ffe1-0000-1000-8000-00805f9b34fb",
+    "0000ffa1-0000-1000-8000-00805f9b34fb",
+]
 NOTIFY_CHAR_UUID = "0000ffe2-0000-1000-8000-00805f9b34fb"
+
+# BLE Discovery names from DM app (FILTER_NAME in ble/robot.js)
+DM_FILTER_NAMES = ["VCX-Knob", "HJK_LE", "HJK_LE_1M", "mxc.toilet.toilet", "HH_", "toilet remote"]
 
 # Connection settings
 CONNECT_TIMEOUT = 10.0
@@ -199,6 +206,8 @@ DM_FUNC_AGING_MODE_ON = 241            # laohua ON
 DM_FUNC_AGING_MODE_OFF = 242           # laohua OFF
 DM_FUNC_VIRTUAL_SEAT_ON = 70           # xuni-zhaozuo ON
 DM_FUNC_VIRTUAL_SEAT_OFF = 71          # xuni-zhaozuo OFF
+DM_FUNC_AUTO_NIGHT_LIGHT_ON = 161      # zidong-yedeng ON
+DM_FUNC_AUTO_NIGHT_LIGHT_OFF = 162     # zidong-yedeng OFF
 DM_FUNC_USER_1_ON = 243                # yuliu-1 ON
 DM_FUNC_USER_1_OFF = 244               # yuliu-1 OFF
 DM_FUNC_USER_2_ON = 245                # yuliu-2 ON
@@ -246,6 +255,8 @@ DM_SMART_TOILET_COMMANDS = {
     "auto_flush_off": ToiletCommand("auto_flush_off", "Auto Flush Off", DM_FUNC_AUTO_FLUSH_OFF, 0, "advanced"),
     "auto_foam_on": ToiletCommand("auto_foam_on", "Auto Foam On", DM_FUNC_AUTO_FOAM_ON, 0, "advanced"),
     "auto_foam_off": ToiletCommand("auto_foam_off", "Auto Foam Off", DM_FUNC_AUTO_FOAM_OFF, 0, "advanced"),
+    "auto_night_light_on": ToiletCommand("auto_night_light_on", "Auto Night Light On", DM_FUNC_AUTO_NIGHT_LIGHT_ON, 0, "advanced"),
+    "auto_night_light_off": ToiletCommand("auto_night_light_off", "Auto Night Light Off", DM_FUNC_AUTO_NIGHT_LIGHT_OFF, 0, "advanced"),
     "aging_mode_on": ToiletCommand("aging_mode_on", "Aging Mode On", DM_FUNC_AGING_MODE_ON, 0, "advanced"),
     "aging_mode_off": ToiletCommand("aging_mode_off", "Aging Mode Off", DM_FUNC_AGING_MODE_OFF, 0, "advanced"),
     "virtual_seat_on": ToiletCommand("virtual_seat_on", "Virtual Seat On", DM_FUNC_VIRTUAL_SEAT_ON, 0, "advanced"),
@@ -307,19 +318,20 @@ DM_BUTTON_DEFINITIONS = [
 DM_SWITCH_DEFINITIONS = [
     SwitchDefinition("auto_flush", "Auto Flush", "auto_flush_on", "auto_flush_off", is_config=True),
     SwitchDefinition("auto_foam", "Auto Foam", "auto_foam_on", "auto_foam_off", is_config=True),
+    SwitchDefinition("auto_night_light", "Auto Night Light", "auto_night_light_on", "auto_night_light_off", is_config=True),
     SwitchDefinition("aging_mode", "Aging Mode", "aging_mode_on", "aging_mode_off", is_config=True),
     SwitchDefinition("virtual_seat", "Virtual Seat", "virtual_seat_on", "virtual_seat_off", is_config=True),
     SwitchDefinition("user_1", "User Preset 1", "user_1_on", "user_1_off", is_config=True),
     SwitchDefinition("user_2", "User Preset 2", "user_2_on", "user_2_off", is_config=True),
 ]
 
-# Sliders DM (function code → level 0-5)
+# Sliders DM (function code → level 0-3 dans l'app DM)
 DM_NUMBER_DEFINITIONS = [
-    ("seat_temp", "Seat Temperature", DM_FUNC_SEAT_TEMP, 0, 5, 1, "level"),
-    ("water_temp", "Water Temperature", DM_FUNC_WATER_TEMP, 0, 5, 1, "level"),
-    ("wind_temp", "Wind Temperature", DM_FUNC_WIND_TEMP, 0, 5, 1, "level"),
-    ("pressure", "Water Pressure", DM_FUNC_WATER_PRESSURE, 0, 5, 1, "level"),
-    ("position", "Nozzle Position", DM_FUNC_POSITION, 0, 5, 1, "level"),
+    ("seat_temp", "Seat Temperature", DM_FUNC_SEAT_TEMP, 0, 3, 1, "level"),
+    ("water_temp", "Water Temperature", DM_FUNC_WATER_TEMP, 0, 3, 1, "level"),
+    ("wind_temp", "Wind Temperature", DM_FUNC_WIND_TEMP, 0, 3, 1, "level"),
+    ("pressure", "Water Pressure", DM_FUNC_WATER_PRESSURE, 0, 3, 1, "level"),
+    ("position", "Nozzle Position", DM_FUNC_POSITION, 0, 3, 1, "level"),
 ]
 
 
@@ -574,6 +586,7 @@ ICONS = {
     "auto_foam": "mdi:chart-bubble",
     "aging_mode": "mdi:cog-outline",
     "virtual_seat": "mdi:seat",
+    "auto_night_light": "mdi:lightbulb-night",
     "user_1": "mdi:account",
     "user_2": "mdi:account-outline",
     "lid_open_force_plus": "mdi:plus",

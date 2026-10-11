@@ -23,8 +23,8 @@ class SmartToiletEntity(CoordinatorEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.mac_address)},
             name=coordinator.device_name,
-            manufacturer="Smart Toilet",
-            model="BLE Smart Toilet",
+            manufacturer=getattr(coordinator.model, "manufacturer", "Smart Toilet"),
+            model=getattr(coordinator.model, "name", "BLE Smart Toilet"),
             sw_version="1.0",
         )
         self._attr_has_entity_name = True

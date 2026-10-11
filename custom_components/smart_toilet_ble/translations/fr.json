@@ -93,6 +93,7 @@
     "switch": {
       "auto_flush": {"name": "Chasse automatique"},
       "auto_foam": {"name": "Mousse automatique"},
+      "auto_night_light": {"name": "Veilleuse automatique"},
       "aging_mode": {"name": "Mode senior"},
       "virtual_seat": {"name": "Siège virtuel"},
       "user_1": {"name": "Préréglage 1"},

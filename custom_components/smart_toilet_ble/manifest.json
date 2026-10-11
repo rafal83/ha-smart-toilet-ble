@@ -1,8 +1,30 @@
 {
   "domain": "smart_toilet_ble",
   "name": "Smart Toilet BLE",
-  "bluetooth": [],
   "codeowners": ["@rafal83"],
+  "bluetooth": [
+    {
+      "service_uuid": "0000ffe0-0000-1000-8000-00805f9b34fb"
+    },
+    {
+      "service_uuid": "0000ffa0-0000-1000-8000-00805f9b34fb"
+    },
+    {
+      "local_name": "VCX-Knob*"
+    },
+    {
+      "local_name": "HJK_LE*"
+    },
+    {
+      "local_name": "mxc.toilet*"
+    },
+    {
+      "local_name": "HH_*"
+    },
+    {
+      "local_name": "toilet remote*"
+    }
+  ],
   "config_flow": true,
   "dependencies": ["bluetooth_adapters", "bluetooth"],
   "documentation": "https://github.com/rafal83/ha-smart-toilet-ble",

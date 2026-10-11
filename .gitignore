@@ -1,2 +1,4 @@
 .qwen/**
 tmp/
+__pycache__/
+*.pyc

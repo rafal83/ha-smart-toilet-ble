@@ -93,6 +93,7 @@
     "switch": {
       "auto_flush": {"name": "Auto Flush"},
       "auto_foam": {"name": "Auto Foam"},
+      "auto_night_light": {"name": "Auto Night Light"},
       "aging_mode": {"name": "Aging Mode"},
       "virtual_seat": {"name": "Virtual Seat"},
       "user_1": {"name": "User Preset 1"},

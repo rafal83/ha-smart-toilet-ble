@@ -14,6 +14,11 @@ from homeassistant.components.bluetooth import async_ble_device_from_address
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
+    DM_FUNC_POSITION,
+    DM_FUNC_SEAT_TEMP,
+    DM_FUNC_WATER_PRESSURE,
+    DM_FUNC_WATER_TEMP,
+    DM_FUNC_WIND_TEMP,
     DM_LIGHT_ON_BIT,
     DM_SLIDER_FUNCTION_TO_KEY,
     DM_SYNC,
@@ -30,6 +35,7 @@ from .const import (
     SKS_SLIDER_FUNCTION_TO_KEY,
     TEMP_FUNCTIONS,
     WRITE_CHAR_UUID,
+    WRITE_CHAR_UUIDS,
     build_dm_command,
     build_sks_command,
     get_model,
@@ -136,10 +142,25 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
         self._is_connected = False
         self._reconnect_task = None
         self._connection_lock = asyncio.Lock()
+        self._command_lock = asyncio.Lock()
         self._write_char_uuid: str | None = None
 
+        # DM internal state for piggybacked temperature and level parameters
+        # Defaults match DM-Toilet app state: shuiwen=1 (34°C), fengwen=0 (off), zuowen=0 (off)
+        self._dm_water_temp: int = 1
+        self._dm_wind_temp: int = 0
+        self._dm_seat_temp: int = 0
+        self._dm_pressure: int = 0
+        self._dm_position: int = 0
+
         # Last set values for sliders/sensors (we have no state feedback)
-        self._last_values: dict[str, int] = {}
+        self._last_values: dict[str, int] = {
+            "water_temp": 1,
+            "wind_temp": 0,
+            "seat_temp": 0,
+            "pressure": 0,
+            "position": 0,
+        }
 
         # Ambient light state (DM type 0x03)
         self._light_on: bool = False
@@ -175,14 +196,31 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
     def device_name(self) -> str:
         return self._device_name
 
+    def _handle_disconnect(self, client: BleakClient) -> None:
+        """Handle spontaneous BLE disconnect."""
+        _LOGGER.info("Spontaneous BLE disconnect from %s (%s)", self._model.name, self._mac_address)
+        self._is_connected = False
+        self._client = None
+        self._write_char_uuid = None
+        self.async_set_updated_data({})
+        self._schedule_reconnect()
+
     async def async_connect(self) -> None:
-        """Connect via bleak-retry-connector."""
+        """Connect via bleak-retry-connector with disconnect callback."""
         async with self._connection_lock:
-            if self._is_connected:
+            if self._is_connected and self._client and self._client.is_connected:
                 return
 
+            # Clean up any stale client
+            if self._client:
+                try:
+                    await self._client.disconnect()
+                except Exception:
+                    pass
+                self._client = None
+
             self._ble_device = async_ble_device_from_address(
-                self.hass, self._mac_address
+                self.hass, self._mac_address, connectable=True
             )
 
             if self._ble_device is None:
@@ -191,6 +229,7 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
                     self._mac_address,
                     RECONNECT_INTERVAL,
                 )
+                self._is_connected = False
                 self._schedule_reconnect()
                 return
 
@@ -204,6 +243,7 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
                     BleakClient,
                     self._ble_device,
                     self._mac_address,
+                    disconnected_callback=self._handle_disconnect,
                     max_attempts=3,
                 )
                 self._is_connected = True
@@ -221,22 +261,27 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
                     RECONNECT_INTERVAL, err,
                 )
                 self._is_connected = False
+                self._client = None
+                self._write_char_uuid = None
                 self._ble_device = None
                 self._schedule_reconnect()
 
     def _find_write_char(self) -> str | None:
-        """Find the writable characteristic, preferring the documented UUID."""
+        """Find the writable characteristic, preferring documented UUIDs (ffe1 / ffa1)."""
         if not self._client:
             return None
 
+        # Look specifically for ffe1 or ffa1 first (matching DM app ble/robot.js)
         fallback = None
         for service in self._client.services:
             for char in service.characteristics:
                 props = char.properties
                 if "write" not in props and "write-without-response" not in props:
                     continue
-                if WRITE_CHAR_UUID in char.uuid.lower():
-                    return char.uuid
+                char_uuid_lower = char.uuid.lower()
+                for known_uuid in WRITE_CHAR_UUIDS:
+                    if known_uuid.lower() in char_uuid_lower or known_uuid[:8].lower() in char_uuid_lower:
+                        return char.uuid
                 if fallback is None:
                     fallback = char.uuid
         return fallback
@@ -261,57 +306,98 @@ class SmartToiletCoordinator(DataUpdateCoordinator):
             self._reconnect_task.cancel()
             self._reconnect_task = None
 
-        if self._client:
+        client = self._client
+        self._is_connected = False
+        self._client = None
+        self._write_char_uuid = None
+        self._ble_device = None
+
+        if client:
             try:
-                await self._client.disconnect()
+                await client.disconnect()
                 _LOGGER.info("Disconnected from Smart Toilet")
             except Exception:
                 pass
-
-        self._is_connected = False
-        self._ble_device = None
-        self._client = None
-        self._write_char_uuid = None
+        self.async_set_updated_data({})
 
     async def send_raw_command(self, command: bytes) -> bool:
-        """Send a raw frame on the write characteristic."""
-        if not self._is_connected or not self._client:
-            _LOGGER.debug("Not connected, attempting to connect")
-            await self.async_connect()
-            if not self._is_connected:
-                _LOGGER.warning("Still not connected after connect attempt")
+        """Send a raw frame on the write characteristic with sequential locking."""
+        async with self._command_lock:
+            if not self._is_connected or not self._client or not self._client.is_connected:
+                _LOGGER.debug("Not connected, attempting to connect before sending command")
+                await self.async_connect()
+                if not self._is_connected or not self._client or not self._client.is_connected:
+                    _LOGGER.warning("Cannot send command: BLE connection failed")
+                    return False
+
+            if not self._write_char_uuid:
+                self._write_char_uuid = self._find_write_char()
+                if not self._write_char_uuid:
+                    _LOGGER.error("Client or write characteristic not available")
+                    return False
+
+            try:
+                await self._client.write_gatt_char(
+                    self._write_char_uuid, command, response=False
+                )
+                _LOGGER.debug("Command sent: %s", command.hex())
+                # Small pacing delay matching the toilet MCU buffer processing window
+                await asyncio.sleep(0.15)
+                return True
+            except Exception as err:
+                _LOGGER.error("Failed to send command: %s", err)
+                self._is_connected = False
+                self._client = None
+                self._write_char_uuid = None
+                self._schedule_reconnect()
                 return False
 
-        if not self._client or not self._write_char_uuid:
-            _LOGGER.error("Client or write characteristic not available")
-            return False
-
-        try:
-            await self._client.write_gatt_char(
-                self._write_char_uuid, command, response=False
-            )
-            _LOGGER.debug("Command sent: %s", command.hex())
-            return True
-        except Exception as err:
-            _LOGGER.error("Failed to send command: %s", err)
-            self._is_connected = False
-            self._schedule_reconnect()
-            return False
-
-    async def send_toilet_command(self, function: int, param1: int = 0, param2: int = 0, param3: int = 0) -> bool:
+    async def send_toilet_command(
+        self,
+        function: int,
+        param1: int | None = None,
+        param2: int | None = None,
+        param3: int | None = None,
+    ) -> bool:
         """Send a toilet command (type 0x02 for DM, byte1=function for SKS)."""
         if self._protocol == PROTOCOL_SKS:
-            command = build_sks_command(function, [param1, param2])
+            p1 = param1 if param1 is not None else 0
+            p2 = param2 if param2 is not None else 0
+            command = build_sks_command(function, [p1, p2])
+            if function in SKS_SLIDER_FUNCTION_TO_KEY:
+                self._last_values[SKS_SLIDER_FUNCTION_TO_KEY[function]] = p1
+                self.async_set_updated_data({})
         else:
-            command = build_dm_command(DM_TYPE_TOILET, function, param1, param2, param3)
+            # DM Protocol: exact behavior reverse-engineered from DM Toilet Control app
+            # (ble/manager.js sendCommand)
+            if function == DM_FUNC_WATER_PRESSURE:
+                if param1 is not None:
+                    self._dm_pressure = int(param1)
+                p1, p2, p3 = self._dm_pressure, 0, 0
+                self._last_values["pressure"] = self._dm_pressure
+            elif function == DM_FUNC_POSITION:
+                if param1 is not None:
+                    self._dm_position = int(param1)
+                p1, p2, p3 = self._dm_position, 0, 0
+                self._last_values["position"] = self._dm_position
+            else:
+                # Update temperature if this command is one of the temp sliders
+                if function == DM_FUNC_WATER_TEMP and param1 is not None:
+                    self._dm_water_temp = int(param1)
+                    self._last_values["water_temp"] = self._dm_water_temp
+                elif function == DM_FUNC_WIND_TEMP and param1 is not None:
+                    self._dm_wind_temp = int(param1)
+                    self._last_values["wind_temp"] = self._dm_wind_temp
+                elif function == DM_FUNC_SEAT_TEMP and param1 is not None:
+                    self._dm_seat_temp = int(param1)
+                    self._last_values["seat_temp"] = self._dm_seat_temp
 
-        # Track value if it's a slider
-        slider_map = (
-            DM_SLIDER_FUNCTION_TO_KEY if self._protocol == PROTOCOL_DM
-            else SKS_SLIDER_FUNCTION_TO_KEY
-        )
-        if function in slider_map:
-            self._last_values[slider_map[function]] = param1
+                # All other commands (buttons, toggles, flush, etc.) piggyback current temperatures
+                p1 = self._dm_water_temp
+                p2 = self._dm_wind_temp
+                p3 = self._dm_seat_temp
+
+            command = build_dm_command(DM_TYPE_TOILET, function, p1, p2, p3)
             self.async_set_updated_data({})
 
         return await self.send_raw_command(command)

@@ -17,6 +17,7 @@ from .const import (
     DOMAIN, 
     TOILET_MODELS, 
     DEFAULT_MODEL,
+    DM_FILTER_NAMES,
     get_model,
 )
 
@@ -49,16 +50,31 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         
         try:
             devices = async_discovered_service_info(self.hass, connectable=True)
-            
+            matched_devices: dict[str, str] = {}
+            other_devices: dict[str, str] = {}
+
             for device in devices:
                 address = device.address
                 name = device.name if device.name else "Unknown Device"
-                
-                if name != "Unknown Device" or address not in self._discovered_devices:
-                    rssi = f" (RSSI: {device.rssi})" if device.rssi else ""
-                    self._discovered_devices[address] = f"{name} - {address}{rssi}"
-            
-            _LOGGER.debug("Discovered %d BLE devices", len(self._discovered_devices))
+                rssi = f" (RSSI: {device.rssi})" if device.rssi else ""
+
+                is_toilet = any(
+                    name.lower().startswith(prefix.lower())
+                    for prefix in DM_FILTER_NAMES
+                )
+
+                if is_toilet:
+                    matched_devices[address] = f"🚽 {name} - {address}{rssi}"
+                elif name != "Unknown Device" or address not in other_devices:
+                    other_devices[address] = f"{name} - {address}{rssi}"
+
+            # Matching toilets appear at the top
+            self._discovered_devices = {**matched_devices, **other_devices}
+            _LOGGER.debug(
+                "Discovered %d BLE devices (%d matching toilet)",
+                len(self._discovered_devices),
+                len(matched_devices),
+            )
             
         except Exception as err:
             _LOGGER.warning("Could not get discovered devices: %s", err)
