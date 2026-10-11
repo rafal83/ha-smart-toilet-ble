@@ -1,7 +1,6 @@
 {
   "domain": "smart_toilet_ble",
   "name": "Smart Toilet BLE",
-  "codeowners": ["@rafal83"],
   "bluetooth": [
     {
       "service_uuid": "0000ffe0-0000-1000-8000-00805f9b34fb"
@@ -25,6 +24,7 @@
       "local_name": "toilet remote*"
     }
   ],
+  "codeowners": ["@rafal83"],
   "config_flow": true,
   "dependencies": ["bluetooth_adapters", "bluetooth"],
   "documentation": "https://github.com/rafal83/ha-smart-toilet-ble",
